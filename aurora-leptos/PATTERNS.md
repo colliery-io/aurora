@@ -54,30 +54,42 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | A bordered content card | `Panel` | `title` + optional `caption` |
 | Body / caption / mono text | `Text` | `mono`, `dimmed`, `bright`, `bold`, `size` |
 | Inline code / a link | `Code` / `Anchor` | — |
-| A button | `Button` | `variant`, `size`, `bad`, `on_click` |
+| A button | `Button` | `variant`, `size`, `bad`, `on_click`; `disabled=move \|\| busy.get()`; `loading` |
+| A button that waits for a request | `Button loading=busy loading_label="Saving…"` | spinner, disabled, `aria-busy` |
 | An icon-only button | `ActionIcon` | give it a `title` |
-| Text / number / password / multiline field | `TextInput` / `NumberInput` / `PasswordInput` / `Textarea` | bind `value` to an `RwSignal` |
-| Pick one of a few options | `Select` (many) · `SegmentedControl` (2–4) | — |
+| Text / number / password / multiline field | `TextInput` / `NumberInput` / `PasswordInput` / `Textarea` | bind `value` to an `RwSignal`; `name`, `autocomplete`, `required`, `on_change` |
+| A sign-in form | `CenterScreen` + `AuthCard` + `TextInput input_type="email"` + `PasswordInput autocomplete="current-password"` | a real `<form>` around it |
+| Pick one of a few options | `Select` (many) · `SegmentedControl` (2–4) | `option_pairs` when the text is not the value |
 | An on/off toggle | `Switch` | `checked: RwSignal<bool>` |
-| Copy-to-clipboard | `CopyButton` | `value` |
-| A hover explanation | `Tooltip` | wrap the trigger |
+| Copy-to-clipboard | `CopyButton` | `value`; `icon`; `link` for a path |
+| Show a new secret one time | `SecretReveal` in a `Modal` | `close_on_scrim=false`; clear it in `on_done` |
+| A hover explanation | `Tooltip` (keyboard too) · `title=` (a plain hint) | see comparison below |
 | A focused task over the page | `Modal` | `size` sm/md/lg/xl, `footer` |
 | A detail view from the side | `Drawer` | same props as `Modal` |
 | Confirm a destroy / cascade | `ConfirmDialog` | `impacts`, `confirm_text`, `busy` |
 | Tell the person something happened | `use_toaster().success(…)` | mount one `ToastStack` |
-| A dropdown of actions | `Menu` + `MenuItem` | items close it on click |
+| A dropdown of actions | `Menu` + `MenuItem` | `trigger` for your own trigger; `align="end"`; `up` |
 | A short status tag | `StatusBadge` (status string) · `Pill` (custom hue) · `HealthPill` (+tooltip) | see comparison below |
 | A small status dot | `Dot` | `color`, `glow` |
 | A filter toggle | `Chip` | `active: Signal<bool>` |
 | Let the user choose light / dark / system | `ThemeToggle` | call `provide_theme()` once at the root |
 | Loading / empty / error states | `Loading` / `Empty` / `ErrorState` | every async view should use these |
 | An inline notice / callout | `Banner` (transient) · `Alert` (in-content) | — |
-| Counts per state | `StateCounts` | `Vec<StateCount{label,count,color}>` |
+| Counts per state | `SegmentedBar legend=true` · `Pill`s | `Segment::new(label, n, token::OK)` |
+| A KPI number | `StatTile` (+ `Sparkline` in `spark`) | `color`, `unit`, `delta`, `sub` |
+| A small trend | `Sparkline` | line, `fill`, or `bars`; `currentColor` |
+| Label / value details | `DetailList` + `KeyValue` | `mono`, `stacked` |
+| A section heading in a panel | `SectionLabel` | `count`, `action` |
+| Code, config, a manifest | `CodeBlock` | `max_height`, `wrap`, copy |
+| A log or an event stream | `LogView` + `LogLine` | follows the tail, copy |
+| An activity or run feed | `FeedList` + `FeedRow` | `at`, `subject`, `status`, `href` / `on_click` |
+| "3m ago" | `RelativeTime` | `at` (ms) or `iso`; `format_duration` for durations |
+| The state of a live stream | `LiveIndicator` | `LiveState::{Live, Connecting, Offline}` |
+| Pages of a long list | `Pagination` | `offset`, `limit`, `total`, `page_sizes` |
+| An icon | `IconPlay`, `IconCopy`, ... | `size`, `title` |
 | A freshness / progress bar | `Meter` | `value` 0–100 |
 | Build/CI status | `BuildStatusBadge` | success/building/failed/pending |
-| A data table | `Table` (generic) · `InputTable` (sources + freshness) | see comparison |
-| Readiness of N inputs | `NodeReadiness` | trigger summary + per-input freshness |
-| Warn about stale sources | `StaleInputsBanner` | renders nothing when all fresh |
+| A data table | `Table` + `TableRow` / `SortHeader` / `TableEmpty` | `fixed`, `widths`, `min_width` |
 | Draw a graph / DAG | `Dag` (+ `DagLegend`) | Aurora does the layout and the interaction; old `Graph` still works |
 
 ---
@@ -92,11 +104,17 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 - **`Banner` vs `Alert` vs `ErrorState`** — `ErrorState` for a failed async load
   (takes an `ApiError`, renders the right title/retry by kind). `Alert` for an
   in-content callout tied to a section. `Banner` for a page-level transient notice
-  (full-width, accent + icon). `StaleInputsBanner` is a ready-made `Banner` for
-  the "some sources are stale" case.
-- **`Table` vs `InputTable`** — `Table` is generic markup (`<thead>/<tbody>` you
-  write). `InputTable` is purpose-built for a list of data **inputs/sources** with
-  state, last-event, rate, a freshness `Meter`, and a per-row action.
+  (full-width, accent + icon).
+- **`Tooltip` vs `title=`** — `title=` is enough for a plain hint on truncated
+  text or an icon that already has an `aria-label`. Use `Tooltip` when the
+  text matters to keyboard users (it shows on focus) or must show fast and in
+  a set place. Inside an SVG chart, use an SVG `<title>`.
+- **`Meter` vs `SegmentedBar` vs `Sparkline`** — `Meter`: one value from 0 to
+  100. `SegmentedBar`: parts of a whole. `Sparkline`: a value over time.
+- **`CodeBlock` vs `LogView` vs `Code`** — `Code` is inline. `CodeBlock` is a
+  block of text that does not change. `LogView` is lines that come in.
+- **`FeedList` vs `Table`** — a feed is a time-ordered list of events with one
+  line each. A table has columns to compare and sort.
 - **`SimpleGrid` vs `Grid`** — `SimpleGrid cols=N` for equal columns (cards,
   stats). `Grid` + `GridCol span=` (out of 12) when widths differ.
 - **`Group`/`Stack` vs grids** — `Group`/`Stack` for a handful of inline items
@@ -132,6 +150,9 @@ Key props only — see rustdoc for the full signatures.
 `SideNavLink{href, active, count, count_color, marker, icon?, on_click}` ·
 `PageHeader{title, sub, back_href, back_label, meta?, actions?, right?}` ·
 `Tabs{tabs:Vec<TabItem>, value, label}` + `TabPanel{value}`.
+Icons: `IconPlay` `IconPause` `IconBolt` `IconCopy` `IconClose` `IconChevron{dir}`
+`IconExternal` `IconCheck` `IconAlert` `IconInfo` `IconMenu` `IconSearch`
+`IconSun` `IconMoon` `IconMonitor`, each `{size, title}`.
 
 ```rust
 let path = use_location().pathname; // or your own route signal
@@ -163,11 +184,19 @@ is a drawer behind a menu button (Escape, the scrim or a link closes it).
 `.cl-mono` class.
 
 ### Inputs (bind `value`/`checked` to an `RwSignal`)
-`Button{variant,size,bad,disabled,on_click}` · `ActionIcon{title,on_click}` ·
-`TextInput{label,placeholder,value,error}` · `Textarea{…,rows}` ·
-`PasswordInput{…}` · `NumberInput{label,value:RwSignal<f64>,step}` ·
-`Select{label,options:Vec<String>,value}` · `Switch{checked,label}` ·
-`SegmentedControl{options,value}` · `CopyButton{value}`.
+`Button{variant,size,bad,disabled,loading,loading_label,button_type,href,title,aria_label,stop_propagation,on_click}` ·
+`ActionIcon{title,on_click}` ·
+`TextInput{label,placeholder,value,error,input_type,disabled,on_input,on_change,name,autocomplete,required,spellcheck,mono}` ·
+`Textarea{…,rows,mono}` · `PasswordInput{…,autocomplete}` ·
+`NumberInput{label,value:RwSignal<f64>,step,min,max,disabled,on_change,name,required,error}` ·
+`Select{label,options,option_pairs,value,placeholder,disabled,on_change,name,required,error}` ·
+`Switch{checked,label,disabled,on_change}` · `SegmentedControl{options,value}` ·
+`CopyButton{value,icon,link,label,copied_label,on_copy}`.
+
+`disabled` takes a `bool`, a signal or a closure, so it changes with the
+state: `disabled=move || busy.get() || name.get().is_empty()`. An attribute
+with no prop goes on the root element with `attr:`
+(`<Button attr:data-testid="save">`).
 
 ```rust
 let name = RwSignal::new(String::new());
@@ -175,9 +204,11 @@ view! { <TextInput label="Name" value=name placeholder="e.g. nightly" /> }
 ```
 
 ### Overlays & feedback
-`Tooltip{label}` · `Modal{open,title,size,footer?,close_on_scrim,locked,on_close}` ·
+`Tooltip{label,position,focusable}` · `Modal{open,title,size,footer?,close_on_scrim,locked,on_close}` ·
 `Drawer{…same}` · `ConfirmDialog{open,title,message,impacts,confirm_text,confirm_label,danger,busy,on_confirm,on_cancel}` ·
-`ToastStack{duration_ms}` + `provide_toaster()` / `use_toaster()` · `Menu{label}` + `MenuItem{on_click}` ·
+`ToastStack{duration_ms}` + `provide_toaster()` / `use_toaster()` ·
+`Menu{label,trigger?,trigger_class,aria_label,align,up,open}` + `MenuItem{on_click,href,disabled,danger}` + `MenuLabel` + `MenuDivider` ·
+`SecretReveal{secret,label,warning,done_label,on_done}` · `CenterScreen{contained}` + `AuthCard{title,sub,brand?,footer?}` ·
 `Alert{title,color}` · `Loader`.
 
 Dialogs move focus in on open (to `data-autofocus`, else the first control),
@@ -222,14 +253,51 @@ match resource.get() {
 ```
 
 ### Data-display widgets
-`Meter{value,color}` · `Banner{color,icon}` · `StaleInputsBanner{inputs}` ·
-`StateCounts{counts}` · `HealthPill{label,color,tip}` · `BuildStatusBadge{status}` ·
-`NodeReadiness{node,mode_label,strategy_label,require_all,inputs,last_run_at}` ·
-`InputTable{inputs,on_action,action_label}`.
+`Meter{value,color,label}` · `Banner{color,icon}` · `HealthPill{label,color,tip}` ·
+`BuildStatusBadge{status}`.
 
-The `Input` model is display-oriented — the app fills `state_label`/`state_color`
-(its own vocab), `rate` (pre-formatted), and timestamps (`f64` ms). `is_stale` /
-`freshness_pct` / `format_ago` are time helpers you can reuse.
+### Data components
+`StatTile{label,value,unit,sub,delta,delta_color,color,spark?}` ·
+`Sparkline{values,bars,fill,width,height,fluid,zero_base,color,label}` ·
+`SegmentedBar{segments:Vec<Segment>,legend,label,height}` ·
+`DetailList{mono,dividers,stacked,label_width}` + `KeyValue{label,mono}` ·
+`SectionLabel{label,count,action?,divider,level}` ·
+`CodeBlock{code,max_height,copy,wrap,label}` ·
+`LogView{lines:Vec<LogLine>,max_height,follow,copy,empty,label}` ·
+`FeedList{label}` + `FeedRow{at,time,subject,actor,status,status_color,dot,href,on_click}` ·
+`Pagination{offset,limit,total,page_sizes,prev_label,next_label,on_change}` ·
+`RelativeTime{at,iso,fallback}` · `LiveIndicator{state,live_label,connecting_label,offline_label,compact}` ·
+`Table{mono,fixed,widths,min_width,label}` + `TableRow{on_click,selected,label}` +
+`SortHeader{label,key,sort,first_desc,align_right,width}` + `TableEmpty{message,colspan}`.
+
+```rust
+// A sortable, clickable, paged table.
+let sort = RwSignal::new(SortState::by("started", SortDir::Desc));
+let (offset, limit) = (RwSignal::new(0), RwSignal::new(20));
+view! {
+    <Table fixed=true widths=vec!["30%".into(), "20%".into(), "50%".into()]>
+        <thead><tr>
+            <SortHeader label="Name" key="name" sort=sort />
+            <SortHeader label="Started" key="started" sort=sort first_desc=true />
+            <th>"Status"</th>
+        </tr></thead>
+        <tbody>
+            {move || rows_for(sort.get(), offset.get(), limit.get()).into_iter().map(|r| view! {
+                <TableRow on_click=Callback::new(move |_| open(r.id))>
+                    <td>{r.name}</td><td><RelativeTime at=r.started /></td><td><StatusBadge status=r.status /></td>
+                </TableRow>
+            }).collect_view()}
+        </tbody>
+    </Table>
+    <Pagination offset limit total=total page_sizes=vec![20, 50, 100] />
+}
+```
+
+The pure helpers are in `data.rs` and have tests: `format_relative(ms)`
+("3m ago", "in 2h"), `format_duration(ms)` ("4.2s", "3m 05s"),
+`page_range(offset, limit, total)` + `page_range_label`, `SortState::toggle`,
+`spark_points`, `segment_widths`. `use_now()` is the shared clock (one timer,
+one second).
 
 ### Graph / DAG
 Aurora owns the layout and the interaction of the graph. The product gives

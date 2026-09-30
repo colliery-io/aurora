@@ -38,8 +38,19 @@ fn App() -> impl IntoView {
 - **Typography** — `Text` (+ `mono`) · `Code` · `Anchor` · `List`/`ListItem`.
 - **Inputs** — `Button` · `ActionIcon` · `TextInput` · `Textarea` · `PasswordInput` ·
   `NumberInput` · `Select` · `Switch` · `SegmentedControl` · `CopyButton`.
-- **Data / overlay** — `Table` · `Tooltip` · `Modal` · `Menu`/`MenuItem` · `Alert` ·
+- **Data / overlay** — `Table` (+ `TableRow`, `SortHeader`, `TableEmpty`) ·
+  `Tooltip` · `Modal` · `Menu`/`MenuItem`/`MenuLabel`/`MenuDivider` · `Alert` ·
   `Loader`.
+- **Data display** (`data`) — `StatTile` · `Sparkline` · `SegmentedBar` ·
+  `DetailList`/`KeyValue` · `SectionLabel` · `CodeBlock` · `LogView` ·
+  `FeedList`/`FeedRow` · `Pagination` · `RelativeTime` · `LiveIndicator`, and
+  the pure helpers `format_relative`, `format_duration`, `page_range`,
+  `SortState`.
+- **Frame** — `AppShell` · `SideNav` · `PageHeader` · `Modal` · `Drawer` ·
+  `ConfirmDialog` · toasts · `Tabs` · `Card` · `SecretReveal` ·
+  `CenterScreen`/`AuthCard`.
+- **Icons** (`icons`) — `IconPlay`, `IconCopy`, `IconChevron`, ... in
+  `currentColor`.
 - **Aurora** — `Pill` · `StatusBadge` · `Dot` · `Panel` · `PageHeader` · `Chip` ·
   `Loading` · `Empty` · `ErrorState`.
 - **tokens** — semantic palette (`token::*`, CSS variable references such as
@@ -51,15 +62,13 @@ fn App() -> impl IntoView {
   first paint with no flash. See the workspace README, "Light and dark theme".
 
 ## Widgets (`widgets`, also core)
-Generic, higher-level data-display building blocks. Vocabulary is generic dataflow
-— a **node** processes when its **inputs** are ready:
-`Meter` · `Banner` · `StateCounts` · `HealthPill` · `BuildStatusBadge` ·
-`NodeReadiness` · `InputTable` · `StaleInputsBanner`, plus the `Input` model and
-`format_ago`/`is_stale`/`freshness_pct` helpers. **Apps supply their own state
-labels, colors, tooltips, and branding as data** — the pack ships no app vocab,
-palette, or logo. App-specific views (e.g. cloacina's reactors→nodes,
-accumulators→inputs, and its DAG/graph + node views) are built downstream from
-these. See `../leptos-gallery` for a worked example.
+`Meter` · `Banner` · `HealthPill` · `BuildStatusBadge`. **Apps supply their own
+state labels, colors, tooltips, and branding as data** — the pack ships no app
+vocab, palette, or logo. See `../leptos-gallery` for a worked example.
+
+0.4 removed `NodeReadiness`, `InputTable`, `StaleInputsBanner`, `StateCounts`,
+the `Input` model and `format_ago` / `is_stale` / `freshness_pct`: no product
+used them. Use `RelativeTime` / `format_relative` and `SegmentedBar`.
 
 ## Styling: pick one
 The stylesheet ships inside the crate; inject it at runtime or materialise it as a

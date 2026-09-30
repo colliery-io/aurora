@@ -31,10 +31,15 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
     lib.rs           #   public API: components, tokens, AURORA_CSS / <AuroraStyles/>
     components.rs    #   core components (primitives)
     frame.rs         #   AppShell, SideNav, PageHeader, Modal, Drawer,
-                     #   ConfirmDialog, toasts, Tabs, Card
+                     #   ConfirmDialog, toasts, Tabs, Card, SecretReveal,
+                     #   CenterScreen, AuthCard
+    data.rs          #   StatTile, Sparkline, SegmentedBar, DetailList,
+                     #   SectionLabel, CodeBlock, LogView, FeedList,
+                     #   Pagination, RelativeTime, LiveIndicator
+    icons.rs         #   a small SVG icon set in currentColor
     tokens.rs        #   semantic tokens (CSS variables) + error classification
     theme.rs         #   light / dark / system: ThemeToggle, set_theme, init script
-    widgets.rs       #   generic data-display widgets (Meter, Banner, …)
+    widgets.rs       #   Meter, Banner, HealthPill, BuildStatusBadge
     graph.rs         #   the graph: Dag, DagLegend, and the old Graph wrapper
     graph_layout.rs  #   the graph data model and its pure layout (unit-tested)
     hlin.rs          #   `hlin` feature: Aurora as a Hlin design pack
