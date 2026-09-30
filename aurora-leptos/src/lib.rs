@@ -66,9 +66,13 @@ pub use tokens::*;
 #[cfg(feature = "components")]
 pub mod components;
 #[cfg(feature = "components")]
+pub mod data;
+#[cfg(feature = "components")]
 pub mod frame;
 #[cfg(feature = "components")]
 pub mod graph;
+#[cfg(feature = "components")]
+pub mod icons;
 #[cfg(feature = "components")]
 pub mod widgets;
 #[cfg(feature = "components")]

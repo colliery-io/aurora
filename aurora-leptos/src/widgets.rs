@@ -57,19 +57,35 @@ pub fn freshness_pct(last_event_at: Option<f64>) -> f64 {
 // Generic primitives
 // ----------------------------------------------------------------------------
 
-/// A thin horizontal progress / freshness bar. `value` is 0–100; `color`
-/// defaults to the ok/green token.
+/// A thin horizontal progress / freshness bar. `value` is 0–100 (a number
+/// or a signal); `color` defaults to the ok/green token. `label` (optional)
+/// makes it a `role="meter"` with that accessible name.
+///
+/// For a bar in several parts, use
+/// [`SegmentedBar`](crate::data::SegmentedBar).
 #[component]
-pub fn Meter(value: f64, #[prop(optional, into)] color: String) -> impl IntoView {
+pub fn Meter(
+    #[prop(into)] value: Signal<f64>,
+    #[prop(optional, into)] color: String,
+    #[prop(optional, into)] label: String,
+) -> impl IntoView {
     let color = if color.is_empty() {
         token::OK.to_string()
     } else {
         color
     };
-    let pct = value.clamp(0.0, 100.0);
+    let pct = move || value.get().clamp(0.0, 100.0);
+    let named = !label.is_empty();
     view! {
-        <div class="cl-meter">
-            <div class="cl-meter__fill" style=format!("width:{pct}%;background:{color};")></div>
+        <div
+            class="cl-meter"
+            role=named.then_some("meter")
+            aria-label=named.then_some(label)
+            aria-valuemin=named.then_some("0")
+            aria-valuemax=named.then_some("100")
+            aria-valuenow=move || named.then(|| format!("{:.0}", pct()))
+        >
+            <div class="cl-meter__fill" style=move || format!("width:{}%;background:{color};", pct())></div>
         </div>
     }
 }

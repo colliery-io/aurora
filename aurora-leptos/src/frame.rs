@@ -1512,6 +1512,109 @@ pub fn Card(
 }
 
 // ============================================================================
+// SecretReveal, CenterScreen, AuthCard
+// ============================================================================
+
+/// Shows a secret one time (a new API key, a token, a recovery code): a
+/// warning line, the secret in a mono block with a copy button, and an "I
+/// saved it" button.
+///
+/// Put it in a [`Modal`] with `close_on_scrim=false`, and clear the secret
+/// in `on_done`, so the secret is not in memory after the person closes it.
+///
+/// - `secret`: the text to show.
+/// - `label` (optional): what the secret is ("API key"), above the block.
+/// - `warning` (default: "Copy this now. You cannot see it again after you
+///   close this."): the line at the top.
+/// - `done_label` (default "I saved it") and `on_done`: the close button.
+#[component]
+pub fn SecretReveal(
+    #[prop(into)] secret: Signal<String>,
+    #[prop(optional, into)] label: String,
+    #[prop(
+        default = "Copy this now. You cannot see it again after you close this.".to_string(),
+        into
+    )]
+    warning: String,
+    #[prop(default = "I saved it".to_string(), into)] done_label: String,
+    #[prop(optional)] on_done: Option<Callback<()>>,
+) -> impl IntoView {
+    let label_id = next_id("secret");
+    let has_label = !label.is_empty();
+    view! {
+        <div class="cl-secret">
+            <div class="cl-secret__warning" role="note">
+                <crate::icons::IconAlert size=16 />
+                <span>{warning}</span>
+            </div>
+            {has_label.then(|| view! { <div class="cl-secret__label" id=label_id.clone()>{label}</div> })}
+            <div class="cl-secret__box">
+                <code
+                    class="cl-secret__value"
+                    aria-labelledby=has_label.then(|| label_id.clone())
+                >
+                    {move || secret.get()}
+                </code>
+                <crate::components::CopyButton value=secret icon=true label="Copy secret" />
+            </div>
+            <div class="cl-secret__actions">
+                <crate::components::Button
+                    on_click=Callback::new(move |_| {
+                        if let Some(cb) = on_done {
+                            cb.run(());
+                        }
+                    })
+                >
+                    {done_label}
+                </crate::components::Button>
+            </div>
+        </div>
+    }
+}
+
+/// A full-screen area with its content in the centre, on the page
+/// background: for sign-in, the OAuth callback, and "no access" or "loading
+/// the session" states. Put an [`AuthCard`] in it.
+///
+/// `contained`: a fixed height (360px) in place of the full screen, for a
+/// gallery or a docs page.
+#[component]
+pub fn CenterScreen(#[prop(optional)] contained: bool, children: Children) -> impl IntoView {
+    view! {
+        <div class="cl-center-screen" class:cl-center-screen--contained=contained>
+            {children()}
+        </div>
+    }
+}
+
+/// A centred card for a sign-in form or a gate state.
+///
+/// - `brand` (optional): the product mark, at the top.
+/// - `title`: an `<h1>`. `sub` (optional): a line under it.
+/// - `children`: the form, a `Loading`, an `Alert`, a button.
+/// - `footer` (optional): a line at the bottom (a link to help, the
+///   version).
+#[component]
+pub fn AuthCard(
+    #[prop(into)] title: String,
+    #[prop(optional, into)] sub: String,
+    #[prop(optional)] brand: Option<Children>,
+    #[prop(optional)] footer: Option<Children>,
+    children: Children,
+) -> impl IntoView {
+    let has_sub = !sub.is_empty();
+    view! {
+        <div class="cl-auth-card">
+            {brand.map(|b| view! { <div class="cl-auth-card__brand">{b()}</div> })}
+            <h1 class="cl-auth-card__title">{title}</h1>
+            {has_sub.then(|| view! { <p class="cl-auth-card__sub">{sub}</p> })}
+            <div class="cl-auth-card__body">{children()}</div>
+            {footer.map(|f| view! { <div class="cl-auth-card__footer">{f()}</div> })}
+        </div>
+    }
+}
+
+// ============================================================================
 // Tests (pure logic)
 // ============================================================================
 

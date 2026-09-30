@@ -27,6 +27,7 @@ components = [
     "dep:leptos",
     "dep:web-sys",
     "dep:js-sys",
+    "dep:wasm-bindgen-futures",
     # Theme: set data-theme on <html>, store the choice, watch the OS setting.
     "web-sys/Document",
     "web-sys/Element",
@@ -43,6 +44,8 @@ components = [
     "web-sys/DomRectList",
     "web-sys/HtmlButtonElement",
     "web-sys/HtmlDivElement",
+    # CopyButton: copy a link (the page origin).
+    "web-sys/Location",
 ]
 
 # Makes this crate a design pack for Hlin: a module implementing `DesignPack`,
@@ -75,6 +78,8 @@ leptos = { version = "0.8", default-features = false, optional = true }
 web-sys = { version = "0.3", features = ["Window", "Navigator", "Clipboard"], optional = true }
 # "Time ago" / freshness helpers (Date.now) for the data-display widgets.
 js-sys = { version = "0.3", optional = true }
+# CopyButton waits for the Clipboard promise, and confirms only on success.
+wasm-bindgen-futures = { version = "0.4", optional = true }
 
 # Hlin's rendering vocabulary, for the `hlin` feature. Taken without its default
 # features: a design pack draws envelopes and never computes a contract

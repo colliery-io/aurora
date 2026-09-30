@@ -366,6 +366,73 @@ fn check_theme(theme: Theme, rows: &mut Vec<Row>) {
         p.get("control-hover"),
         4.5,
     );
+    // Data components (COLLIERY-T-1834).
+    for s in ["panel", "panel-2"] {
+        push(
+            format!("selected table row: --fg on --ice-bg over --{s}"),
+            p.get("fg"),
+            over(p.get("ice-bg"), p.get(s)),
+            4.5,
+        );
+    }
+    for t in ["fg", "muted"] {
+        push(
+            format!("feed row hover: --{t} on --control-hover"),
+            p.get(t),
+            p.get("control-hover"),
+            4.5,
+        );
+    }
+    for t in ["fg", "fg-2", "fg-bright", "faint", "muted"] {
+        push(
+            format!("code / log / secret: --{t} on --inset"),
+            p.get(t),
+            p.get("inset"),
+            4.5,
+        );
+    }
+    for h in ["ok", "gold", "muted"] {
+        push(
+            format!("live indicator: --{h}-fg on --{h}-bg over --panel"),
+            p.get(&format!("{h}-fg")),
+            over(p.get(&format!("{h}-bg")), p.get("panel")),
+            4.5,
+        );
+    }
+    push(
+        "secret warning: --gold-fg on --gold-bg over --panel".into(),
+        p.get("gold-fg"),
+        over(p.get("gold-bg"), p.get("panel")),
+        4.5,
+    );
+    push(
+        "section count: --muted-fg on --muted-bg over --bg".into(),
+        p.get("muted-fg"),
+        over(p.get("muted-bg"), p.get("bg")),
+        4.5,
+    );
+    push(
+        "danger menu item: --bad-fg on --bad-bg over --panel".into(),
+        p.get("bad-fg"),
+        over(p.get("bad-bg"), p.get("panel")),
+        4.5,
+    );
+    for t in ["muted", "faint", "fg-bright"] {
+        push(
+            format!("stat tile: --{t} on --panel"),
+            p.get(t),
+            p.get("panel"),
+            4.5,
+        );
+    }
+    for h in HUES {
+        push(
+            format!("sparkline / segment --{h} vs --panel"),
+            p.get(h),
+            p.get("panel"),
+            3.0,
+        );
+    }
     // 5. Edges of controls and graphics (3:1).
     for s in ["bg", "sidebar", "panel", "panel-2"] {
         push(
