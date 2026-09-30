@@ -58,10 +58,8 @@ const NAV: &[(&str, &str)] = &[
     ("tabs", "Tabs"),
     ("card", "Card"),
     ("§Widgets", ""),
-    ("badges", "StateCounts · BuildStatus · HealthPill · Meter"),
-    ("banners", "Banner · StaleInputsBanner"),
-    ("readiness", "NodeReadiness"),
-    ("input-table", "InputTable"),
+    ("badges", "BuildStatus · HealthPill · Meter"),
+    ("banners", "Banner"),
     ("§Graph", ""),
     ("graph", "Graph / DAG"),
 ];
@@ -104,68 +102,6 @@ fn App() -> impl IntoView {
     let password = RwSignal::new(String::from("hunter2"));
     let notes = RwSignal::new(String::from("Backfill window: 24h"));
 
-    // Demo data. The gallery plays the role of a consuming app (e.g. cloacina):
-    // it supplies its own state→label/color vocab; the widgets just render.
-    let now = js_sys::Date::now();
-    let fresh = Some(now - 5000.0);
-    fn state_color(state: &str) -> String {
-        match state {
-            "live" => token::OK,
-            "warming" => token::GOLD,
-            "unreachable" => token::BAD,
-            _ => token::MUTED,
-        }
-        .to_string()
-    }
-    let input = |name: &str, state: &str, last: Option<f64>, total: i64| Input {
-        name: name.into(),
-        group: Some("rollup".into()),
-        state_label: state.replace('_', " "),
-        state_color: state_color(state),
-        last_event_at: last,
-        rate: Some(format!("~{total}/min")),
-        ..Default::default()
-    };
-    let mixed_inputs = vec![
-        Input {
-            manual_events: Some(3),
-            last_manual_event_at: Some(now - 600000.0),
-            ..input("orders.events", "live", fresh, 18240)
-        },
-        Input {
-            error: Some("connection refused (econnrefused 10.0.4.12:5432)".into()),
-            ..input("inventory.snapshots", "unreachable", Some(now - 9.0e8), 312)
-        },
-        input("shipments.tracking", "warming", None, 0),
-    ];
-    let mixed_inputs_table = mixed_inputs.clone();
-    let readiness_inputs = vec![
-        input("orders.events", "live", fresh, 18240),
-        input("clicks.stream", "live", fresh, 92110),
-        input("inventory.snapshots", "unreachable", Some(now - 9.0e8), 312),
-    ];
-    let run_counts = vec![
-        StateCount {
-            label: "running".into(),
-            count: 1,
-            color: token::ICE.into(),
-        },
-        StateCount {
-            label: "completed".into(),
-            count: 3,
-            color: token::OK.into(),
-        },
-        StateCount {
-            label: "failed".into(),
-            count: 1,
-            color: token::BAD.into(),
-        },
-        StateCount {
-            label: "scheduled".into(),
-            count: 1,
-            color: token::VIOLET.into(),
-        },
-    ];
     let g_nodes = vec![
         GraphNode::new("orders", "orders.events")
             .color(token::ICE)
@@ -491,11 +427,8 @@ fn App() -> impl IntoView {
 
             <FrameSections />
 
-            // ---- Widgets: StateCounts · BuildStatusBadge · HealthPill · Meter ----
-            <Section id="badges" title="StateCounts · BuildStatusBadge · HealthPill · Meter" caption="generic data-display widgets — the app supplies labels/colors">
-                <Group gap="sm" wrap=true>
-                    <StateCounts counts=run_counts />
-                </Group>
+            // ---- Widgets: BuildStatusBadge · HealthPill · Meter ----
+            <Section id="badges" title="BuildStatusBadge · HealthPill · Meter" caption="generic data-display widgets — the app supplies labels/colors">
                 <Group gap="sm" wrap=true>
                     <BuildStatusBadge status="success" />
                     <BuildStatusBadge status="building" />
@@ -514,35 +447,13 @@ fn App() -> impl IntoView {
                 </Group>
             </Section>
 
-            // ---- Widgets: Banner · StaleInputsBanner ----
-            <Section id="banners" title="Banner · StaleInputsBanner" caption="generic callout; stale-inputs convenience built on it">
+            // ---- Widgets: Banner ----
+            <Section id="banners" title="Banner" caption="generic callout">
                 <Stack gap="sm">
                     <Banner color=token::ICE icon="ℹ">"Heads up — a generic info banner."</Banner>
                     <Banner>"A warning banner (default gold accent)."</Banner>
                     <Banner color=token::BAD icon="✕">"An error banner."</Banner>
-                    <StaleInputsBanner inputs=mixed_inputs />
                 </Stack>
-            </Section>
-
-            // ---- Widgets: NodeReadiness ----
-            <Section id="readiness" title="NodeReadiness" caption="trigger description + per-input freshness + ready/waiting summary">
-                <NodeReadiness
-                    node="rollup"
-                    mode_label="all"
-                    strategy_label="latest"
-                    require_all=true
-                    inputs=readiness_inputs
-                    last_run_at=now - 95000.0
-                />
-            </Section>
-
-            // ---- Widgets: InputTable ----
-            <Section id="input-table" title="InputTable" caption="per-input state, last event, rate, freshness Meter, row action">
-                <div class="gallery__card">
-                    <Panel title="Input freshness" caption="rollup">
-                        <InputTable inputs=mixed_inputs_table on_action=Callback::new(|_name: String| {}) action_label="push ▸" />
-                    </Panel>
-                </div>
             </Section>
 
             // ---- Graph / DAG ----

@@ -11,17 +11,25 @@
 //! - **Components** ([`components`]) — the full Mantine-primitive + Aurora surface:
 //!   layout (Box/Group/Stack/SimpleGrid/Grid/AppShell), inputs (Button/TextInput/
 //!   Textarea/PasswordInput/NumberInput/Select/Switch/SegmentedControl/CopyButton/
-//!   ActionIcon), data + overlay (Table/Tooltip/Modal/Menu/Alert/Loader), and the
+//!   ActionIcon), data + overlay (Table + TableRow/SortHeader/TableEmpty,
+//!   Tooltip/Modal/Menu/Alert/Loader), and the
 //!   Aurora pieces (Pill/StatusBadge/Dot/Panel/PageHeader/Chip/Loading/Empty/
 //!   ErrorState).
 //! - **Frame** ([`frame`], re-exported from [`components`]) — the page chrome
 //!   and the layers over a page: `AppShell` + `SideNav`, `PageHeader`, `Modal`,
-//!   `Drawer`, `ConfirmDialog`, `ToastStack` + `Toaster`, `Tabs`, `Card`.
-//! - **Widgets** ([`widgets`]) — generic data-display building blocks: `Meter`,
-//!   `Banner`, `StateCounts`, `HealthPill`, `BuildStatusBadge`, `NodeReadiness`,
-//!   `InputTable`, `StaleInputsBanner`, plus the `Input` model and
-//!   `format_ago`/`is_stale`/`freshness_pct` helpers. Apps supply their own state
-//!   labels/colors as data — no built-in vocab or branding.
+//!   `Drawer`, `ConfirmDialog`, `ToastStack` + `Toaster`, `Tabs`, `Card`,
+//!   `SecretReveal`, `CenterScreen` + `AuthCard`.
+//! - **Data** ([`data`], re-exported from [`components`]) — small pieces that
+//!   show data: `StatTile`, `Sparkline`, `SegmentedBar`, `DetailList` +
+//!   `KeyValue`, `SectionLabel`, `CodeBlock`, `LogView`, `FeedList` +
+//!   `FeedRow`, `Pagination`, `RelativeTime` (one shared clock),
+//!   `LiveIndicator`; and the pure helpers `format_relative`,
+//!   `format_duration`, `page_range`, `SortState`.
+//! - **Icons** ([`icons`], re-exported from [`components`]) — a small SVG set
+//!   in `currentColor`: `IconPlay`, `IconCopy`, `IconChevron`, ...
+//! - **Widgets** ([`widgets`]) — `Meter`, `Banner`, `HealthPill`,
+//!   `BuildStatusBadge`. Apps supply their own state labels/colors as data —
+//!   no built-in vocab or branding.
 //! - **Graph** ([`graph`], [`graph_layout`]) — the Aurora graph. The product
 //!   gives nodes, edges and lanes (`DagNode`, `DagEdge`, `DagLane`); Aurora
 //!   does the layout (a pure, tested function) and the interaction (select,

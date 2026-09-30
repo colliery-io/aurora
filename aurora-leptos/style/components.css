@@ -1148,50 +1148,6 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
 .cl-banner__icon { color: var(--banner-color, var(--gold)); }
 .cl-banner__text { font-size: 12.5px; color: var(--fg-2); }
 
-/* StateCounts — count-per-state circles (color set inline) */
-.cl-state-count {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  color: var(--on-status);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 20px;
-  text-align: center;
-  display: inline-block;
-  flex: 0 0 auto;
-}
-
-/* NodeReadiness */
-.cl-readiness { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
-.cl-readiness__desc { flex: 1 1 260px; min-width: 200px; font-size: 12.5px; color: var(--fg-2); }
-.cl-readiness__list { flex: 1 1 220px; display: flex; flex-direction: column; gap: 8px; }
-.cl-readiness__row { display: flex; align-items: center; gap: 8px; }
-.cl-readiness__name { font-family: var(--font-mono); font-size: 12px; color: var(--fg-2); }
-.cl-readiness__hint { font-family: var(--font-mono); font-size: 10.5px; }
-.cl-readiness__summary { flex: 1 1 220px; background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 9px; padding: 11px 13px; }
-.cl-readiness__summary-title { font-size: 12.5px; font-weight: 600; }
-.cl-readiness__summary-sub { font-family: var(--font-mono); font-size: 11px; color: var(--faint); margin-top: 5px; }
-
-/* InputTable (6-col freshness grid) */
-.cl-input-table__head,
-.cl-input-table__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px 120px 72px 150px 70px;
-  gap: 12px;
-}
-.cl-input-table__head { padding-bottom: 9px; }
-.cl-input-table__grid { align-items: center; }
-.cl-input-table__th { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); text-align: left; }
-.cl-input-table__th--right { text-align: right; }
-.cl-input-table__row { border-top: 1px solid var(--border-fainter); padding: 8px 0; }
-.cl-input-table__name-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.cl-input-table__name { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cl-input-table__state { font-size: 12px; }
-.cl-input-table__cell-mono { font-family: var(--font-mono); font-size: 11.5px; }
-.cl-input-table__action { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 7px; cursor: pointer; border: 1px solid var(--border-control); background: var(--panel); color: var(--ice); justify-self: end; }
-.cl-input-table__error { font-family: var(--font-mono); font-size: 11px; margin-top: 4px; }
 
 /* ============================================================
    Data components (see data.rs)
