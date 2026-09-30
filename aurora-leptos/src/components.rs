@@ -9,6 +9,10 @@ use leptos::prelude::*;
 
 use crate::tokens::{classify, fg_for, fill_for, tint, ApiError};
 
+// The frame (AppShell, SideNav, PageHeader, Modal, Drawer, ConfirmDialog,
+// toasts, Tabs, Card) lives in `frame.rs`; it is part of this module's API.
+pub use crate::frame::*;
+
 /// A unique `id` for one field instance, so a `<label for=…>` can point at its
 /// control.
 ///
@@ -226,45 +230,7 @@ pub fn Tooltip(#[prop(into)] label: String, children: Children) -> impl IntoView
 }
 
 // ----------------------------------------------------------------------------
-// Modal — reactive on a bool signal (fine-grained; no re-render of the tree)
-// ----------------------------------------------------------------------------
-
-#[component]
-pub fn Modal(
-    open: RwSignal<bool>,
-    #[prop(into)] title: String,
-    children: ChildrenFn,
-) -> impl IntoView {
-    let children = StoredValue::new(children);
-    view! {
-        {move || open.get().then(|| {
-            let title = title.clone();
-            let aria_title = title.clone();
-            view! {
-                <div class="cl-modal-overlay" on:click=move |_| open.set(false)>
-                    // ARIA dialog semantics: assistive tech and role-based
-                    // selectors resolve the modal as a dialog named by its title.
-                    <div
-                        class="cl-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label=aria_title.clone()
-                        on:click=|e| e.stop_propagation()
-                    >
-                        <div class="cl-modal__header">
-                            <span class="cl-modal__title">{title}</span>
-                            <button class="cl-modal__close" on:click=move |_| open.set(false)>"×"</button>
-                        </div>
-                        <div class="cl-modal__body">{children.with_value(|c| c())}</div>
-                    </div>
-                </div>
-            }
-        })}
-    }
-}
-
-// ----------------------------------------------------------------------------
-// Aurora: Pill / StatusBadge / Dot / Panel / PageHeader / Chip
+// Aurora: Pill / StatusBadge / Dot / Panel / Chip
 // ----------------------------------------------------------------------------
 
 #[component]
@@ -307,26 +273,6 @@ pub fn Panel(
                 {has_caption.then(|| view! { <span class="cl-panel__caption">{caption}</span> })}
             </div>
             {children()}
-        </div>
-    }
-}
-
-#[component]
-pub fn PageHeader(
-    #[prop(into)] title: String,
-    #[prop(optional, into)] sub: String,
-    #[prop(optional)] right: Option<Children>,
-) -> impl IntoView {
-    let has_sub = !sub.is_empty();
-    view! {
-        <div class="cl-page-header">
-            <div>
-                // A real heading element: the page title carries the ARIA
-                // heading role for assistive tech and role-based selectors.
-                <h1 class="cl-page-header__title">{title}</h1>
-                {has_sub.then(|| view! { <div class="cl-page-header__sub">{sub}</div> })}
-            </div>
-            {right.map(|r| r())}
         </div>
     }
 }
@@ -746,23 +692,6 @@ pub fn MenuItem(
         >
             {children()}
         </button>
-    }
-}
-
-/// Application scaffold (Mantine `AppShell`): a header row across the top, a left
-/// navbar, and the main content area.
-#[component]
-pub fn AppShell(
-    #[prop(optional)] header: Option<Children>,
-    navbar: Children,
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <div class="cl-appshell">
-            {header.map(|h| view! { <div class="cl-appshell__header">{h()}</div> })}
-            <div class="cl-appshell__navbar">{navbar()}</div>
-            <div class="cl-appshell__main">{children()}</div>
-        </div>
     }
 }
 

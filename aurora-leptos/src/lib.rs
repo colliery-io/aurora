@@ -14,6 +14,9 @@
 //!   ActionIcon), data + overlay (Table/Tooltip/Modal/Menu/Alert/Loader), and the
 //!   Aurora pieces (Pill/StatusBadge/Dot/Panel/PageHeader/Chip/Loading/Empty/
 //!   ErrorState).
+//! - **Frame** ([`frame`], re-exported from [`components`]) — the page chrome
+//!   and the layers over a page: `AppShell` + `SideNav`, `PageHeader`, `Modal`,
+//!   `Drawer`, `ConfirmDialog`, `ToastStack` + `Toaster`, `Tabs`, `Card`.
 //! - **Widgets** ([`widgets`]) — generic data-display building blocks: `Meter`,
 //!   `Banner`, `StateCounts`, `HealthPill`, `BuildStatusBadge`, `NodeReadiness`,
 //!   `InputTable`, `StaleInputsBanner`, plus the `Input` model and
@@ -56,6 +59,8 @@ pub use tokens::*;
 // UI surface — requires the `components` feature (the default).
 #[cfg(feature = "components")]
 pub mod components;
+#[cfg(feature = "components")]
+pub mod frame;
 #[cfg(feature = "components")]
 pub mod graph;
 #[cfg(feature = "components")]

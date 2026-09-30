@@ -35,6 +35,14 @@ components = [
     "web-sys/Storage",
     "web-sys/MediaQueryList",
     "web-sys/EventTarget",
+    # Frame: focus traps, Escape, arrow keys, the narrow-screen drawer.
+    "web-sys/KeyboardEvent",
+    "web-sys/MouseEvent",
+    "web-sys/Node",
+    "web-sys/NodeList",
+    "web-sys/DomRectList",
+    "web-sys/HtmlButtonElement",
+    "web-sys/HtmlDivElement",
 ]
 
 # Makes this crate a design pack for Hlin: a module implementing `DesignPack`,
