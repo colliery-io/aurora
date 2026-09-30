@@ -9,12 +9,15 @@ use aurora_leptos::tokens::{token, ApiError};
 use aurora_leptos::widgets::*;
 use leptos::prelude::*;
 
+mod frame_demo;
+use frame_demo::FrameSections;
+
 fn main() {
     leptos::mount::mount_to_body(App);
 }
 
 #[component]
-fn Section(
+pub(crate) fn Section(
     #[prop(into)] id: String,
     #[prop(into)] title: String,
     #[prop(into)] caption: String,
@@ -44,7 +47,15 @@ const NAV: &[(&str, &str)] = &[
     ("states", "Loading · Empty · ErrorState"),
     ("more-inputs", "Switch · Number · Password · …"),
     ("layout-prims", "SimpleGrid · Grid · List"),
-    ("menu-appshell", "Menu · AppShell"),
+    ("menu-appshell", "Menu"),
+    ("§Frame", ""),
+    ("appshell", "AppShell · SideNav"),
+    ("page-header", "PageHeader"),
+    ("modal", "Modal · Drawer"),
+    ("confirm", "ConfirmDialog"),
+    ("toast", "Toast"),
+    ("tabs", "Tabs"),
+    ("card", "Card"),
     ("§Widgets", ""),
     ("badges", "StateCounts · BuildStatus · HealthPill · Meter"),
     ("banners", "Banner · StaleInputsBanner"),
@@ -78,6 +89,8 @@ fn Nav() -> impl IntoView {
 fn App() -> impl IntoView {
     // Theme state for the whole gallery; the toggle in the header uses it.
     provide_theme();
+    // One toast queue for the whole gallery; <ToastStack/> shows it.
+    provide_toaster();
     let modal_open = RwSignal::new(false);
     let name = RwSignal::new(String::from("nightly-ingest"));
     let bad_field = RwSignal::new(String::new());
@@ -464,47 +477,18 @@ fn App() -> impl IntoView {
                 </div>
             </Section>
 
-            // ---- Menu + AppShell ----
-            <Section id="menu-appshell" title="Menu · AppShell" caption="dropdown menu and the app scaffold">
-                <Group top=true wrap=true>
-                    <Menu label="Actions">
-                        <div class="cl-menu__label">"Run"</div>
-                        <MenuItem>"Trigger now"</MenuItem>
-                        <MenuItem>"Pause schedule"</MenuItem>
-                        <div class="cl-menu__divider"></div>
-                        <MenuItem>"Delete…"</MenuItem>
-                    </Menu>
-                    <div style="flex:1;min-width:420px;">
-                        <AppShell
-                            header=Box::new(|| view! {
-                                // app-owned brand mark (the pack ships no branding)
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    // Colours from the tokens, so the mark follows the theme.
-                                    <path d="M5 4 C5 12, 12 12, 12 19" style="stroke:var(--ice)" stroke-width="1.6" stroke-linecap="round" />
-                                    <path d="M12 4 C12 12, 12 12, 12 19" style="stroke:var(--teal)" stroke-width="1.6" stroke-linecap="round" />
-                                    <path d="M19 4 C19 12, 12 12, 12 19" style="stroke:var(--violet)" stroke-width="1.6" stroke-linecap="round" />
-                                    <circle cx="5" cy="4" r="1.8" style="fill:var(--ice)" />
-                                    <circle cx="12" cy="4" r="1.8" style="fill:var(--teal)" />
-                                    <circle cx="19" cy="4" r="1.8" style="fill:var(--violet)" />
-                                    <circle cx="12" cy="20" r="2" style="fill:var(--brand-stroke)" />
-                                </svg>
-                                <Text bright=true bold=true>"cloacina"</Text>
-                            }.into_any())
-                            navbar=Box::new(|| view! {
-                                <Stack gap="xs">
-                                    <Text size="sm" bright=true>"Overview"</Text>
-                                    <Text size="sm" dimmed=true>"Executions"</Text>
-                                    <Text size="sm" dimmed=true>"Reactors"</Text>
-                                    <Text size="sm" dimmed=true>"Settings"</Text>
-                                </Stack>
-                            }.into_any())
-                        >
-                            <PageHeader title="Overview" sub="3 nodes · 9 inputs" />
-                            <Text dimmed=true size="sm">"Main content area."</Text>
-                        </AppShell>
-                    </div>
-                </Group>
+            // ---- Menu ----
+            <Section id="menu-appshell" title="Menu" caption="dropdown menu off a trigger button">
+                <Menu label="Actions">
+                    <div class="cl-menu__label">"Run"</div>
+                    <MenuItem>"Trigger now"</MenuItem>
+                    <MenuItem>"Pause schedule"</MenuItem>
+                    <div class="cl-menu__divider"></div>
+                    <MenuItem>"Delete…"</MenuItem>
+                </Menu>
             </Section>
+
+            <FrameSections />
 
             // ---- Widgets: StateCounts · BuildStatusBadge · HealthPill · Meter ----
             <Section id="badges" title="StateCounts · BuildStatusBadge · HealthPill · Meter" caption="generic data-display widgets — the app supplies labels/colors">
@@ -574,6 +558,7 @@ fn App() -> impl IntoView {
                 </Group>
             </Section>
             </main>
+            <ToastStack />
         </div>
     }
 }

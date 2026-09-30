@@ -331,6 +331,29 @@ fn check_theme(theme: Theme, rows: &mut Vec<Row>) {
         menu_hover,
         4.5,
     );
+    // Frame (COLLIERY-T-1832): side nav, toasts, tabs.
+    push(
+        "active nav link: --fg-bright on --ice-bg over --sidebar".into(),
+        p.get("fg-bright"),
+        over(p.get("ice-bg"), p.get("sidebar")),
+        4.5,
+    );
+    for h in HUES {
+        push(
+            format!("nav count: --{h}-fg on --{h}-bg over --sidebar"),
+            p.get(&format!("{h}-fg")),
+            over(p.get(&format!("{h}-bg")), p.get("sidebar")),
+            4.5,
+        );
+    }
+    for t in ["fg", "muted"] {
+        push(
+            format!("toast: --{t} on --control"),
+            p.get(t),
+            p.get("control"),
+            4.5,
+        );
+    }
     push(
         "segmented active: --fg-bright on --control".into(),
         p.get("fg-bright"),

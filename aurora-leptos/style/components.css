@@ -322,17 +322,22 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 }
 .cl-tooltip:hover .cl-tooltip__label { opacity: 1; }
 
-/* ----- Modal ----- */
-.cl-modal-overlay {
+/* ----- Modal + Drawer (one dialog frame; see frame.rs) ----- */
+.cl-modal-overlay,
+.cl-drawer-overlay {
   position: fixed;
   inset: 0;
   background: var(--scrim);
+  z-index: 100;
+}
+.cl-modal-overlay {
   backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 10vh;
-  z-index: 100;
+  padding: 10vh 16px 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .cl-modal {
   background: var(--panel);
@@ -340,21 +345,106 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   border-radius: var(--radius-md);
   width: min(520px, calc(100vw - 32px));
   box-shadow: var(--shadow-lg);
+  outline: none;
+  animation: cl-dialog-in 140ms ease-out;
 }
+.cl-modal--sm { width: min(400px, calc(100vw - 32px)); }
+.cl-modal--md { width: min(520px, calc(100vw - 32px)); }
+.cl-modal--lg { width: min(760px, calc(100vw - 32px)); }
+.cl-modal--xl { width: min(1060px, calc(100vw - 32px)); }
+.cl-modal-overlay:has(.cl-modal--xl) { padding-top: 6vh; }
 .cl-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border-soft);
 }
 .cl-modal__title { font-size: var(--fs-md); font-weight: 600; color: var(--fg-bright); }
 .cl-modal__close {
-  background: transparent; border: none; cursor: pointer;
-  color: var(--muted); font-size: 20px; line-height: 1; padding: 4px;
+  background: transparent; border: none; cursor: pointer; border-radius: var(--radius-sm);
+  color: var(--muted); font-size: 20px; line-height: 1; padding: 4px 6px;
 }
-.cl-modal__close:hover { color: var(--fg); }
+.cl-modal__close:hover { color: var(--fg); background: var(--control-hover); }
+.cl-modal__close:disabled { opacity: 0.4; cursor: not-allowed; }
 .cl-modal__body { padding: 18px; }
+.cl-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--panel-2);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+/* Drawer: a panel from the right, full height. */
+.cl-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(430px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  animation: cl-drawer-in 180ms ease-out;
+}
+.cl-drawer--sm { width: min(360px, 92vw); }
+.cl-drawer--lg { width: min(640px, 92vw); }
+.cl-drawer--xl { width: min(860px, 92vw); }
+.cl-drawer .cl-modal__body { flex: 1; overflow-y: auto; }
+.cl-drawer .cl-modal__footer { border-radius: 0; }
+
+@keyframes cl-dialog-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+}
+@keyframes cl-drawer-in {
+  from { transform: translateX(24px); opacity: 0.4; }
+}
+.cl-modal:focus-visible,
+.cl-drawer:focus-visible { outline: 2px solid var(--ice); outline-offset: -2px; }
+
+/* ConfirmDialog body. */
+.cl-confirm { display: flex; flex-direction: column; gap: 14px; }
+.cl-confirm__message { margin: 0; font-size: var(--fs-sm); line-height: 1.55; color: var(--fg-2); }
+.cl-confirm__impacts {
+  background: var(--inset);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+.cl-confirm__impacts-label { font-size: var(--fs-xs); font-weight: 600; color: var(--fg-2); margin-bottom: 6px; }
+.cl-confirm__list {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--fg);
+}
+.cl-confirm__list li { margin: 2px 0; }
+
+/* A busy button (aria-busy) stays readable while it is disabled. */
+.cl-btn[aria-busy="true"]:disabled { opacity: 0.75; cursor: progress; }
+
+/* Spinner inside a button (busy state). Uses the button's text colour. */
+.cl-btn__spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: cl-spin 0.7s linear infinite;
+  flex: none;
+}
 
 /* ----- Alert (used by ErrorState) ----- */
 .cl-alert {
@@ -428,14 +518,41 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 4px;
 }
-.cl-page-header__title { margin: 0; font-size: 22px; font-weight: 600; color: var(--fg-bright); }
+.cl-page-header__main { min-width: 0; }
+.cl-page-header__back {
+  display: inline-block;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 2px;
+  border-radius: var(--radius-xs);
+}
+.cl-page-header__back:hover { color: var(--fg); text-decoration: underline; }
+.cl-page-header__back:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.cl-page-header__title { margin: 0; font-size: 22px; font-weight: 600; color: var(--fg-bright); overflow-wrap: anywhere; }
 .cl-page-header__sub {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--faint);
   margin-top: 2px;
+}
+.cl-page-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cl-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: none;
 }
 
 /* ----- Chip (filter) ----- */
@@ -566,11 +683,322 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 .cl-menu__label { padding: 6px 10px 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--faint); }
 .cl-menu__divider { height: 1px; background: var(--border-soft); margin: 4px 0; }
 
-/* AppShell */
-.cl-appshell { display: grid; grid-template-columns: var(--cl-navbar-w, 220px) 1fr; grid-template-rows: auto 1fr; min-height: 320px; border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
-.cl-appshell__header { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
-.cl-appshell__navbar { background: var(--sidebar); border-right: 1px solid var(--border); padding: 12px; }
-.cl-appshell__main { background: var(--bg); padding: 18px; overflow: auto; }
+/* ============================================================
+   Frame — AppShell, SideNav, Toasts, Tabs, Card (see frame.rs)
+   ============================================================ */
+
+/* ----- AppShell -----
+   Fills the page by default: a sticky header, a sticky sidebar, the main
+   area. `--contained` draws it as a bordered panel (docs, galleries).
+   Below 768px the sidebar is a drawer behind the menu button. */
+.cl-appshell {
+  --cl-header-h: 52px;
+  display: grid;
+  grid-template-columns: var(--cl-navbar-w, 232px) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "header header" "nav main";
+  min-height: 100vh;
+  background: var(--bg);
+}
+.cl-appshell--no-nav { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "main"; }
+.cl-appshell--no-header { --cl-header-h: 0px; }
+.cl-appshell--no-header .cl-appshell__header { display: none; }
+.cl-appshell__header {
+  grid-area: header;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--cl-header-h);
+  box-sizing: border-box;
+  padding: 8px 16px;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+}
+.cl-appshell__brand { display: flex; align-items: center; gap: 9px; flex: none; }
+.cl-appshell__brand--side { padding: 6px 8px 12px; }
+.cl-appshell__header-content { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.cl-appshell__header-content > :only-child { flex: 1; min-width: 0; }
+.cl-appshell__menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--h-sm);
+  height: var(--h-sm);
+  margin-left: -6px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.cl-appshell__menu:hover { background: var(--control-hover); color: var(--fg-bright); }
+.cl-appshell__menu:focus-visible { outline: 2px solid var(--ice); outline-offset: 1px; }
+.cl-appshell__navbar {
+  grid-area: nav;
+  position: sticky;
+  top: var(--cl-header-h);
+  height: calc(100vh - var(--cl-header-h));
+  box-sizing: border-box;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+}
+.cl-appshell__scrim { display: none; }
+.cl-appshell__main { grid-area: main; min-width: 0; padding: 22px 28px; }
+
+.cl-appshell--contained {
+  min-height: 0;
+  height: var(--cl-appshell-h, 480px);
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+}
+.cl-appshell--contained .cl-appshell__header { position: static; }
+.cl-appshell--contained .cl-appshell__navbar { position: static; height: auto; }
+.cl-appshell--contained .cl-appshell__main { overflow: auto; padding: 18px; }
+
+@media (max-width: 768px) {
+  .cl-appshell,
+  .cl-appshell.cl-appshell--no-nav {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "main";
+  }
+  .cl-appshell.cl-appshell--no-header { --cl-header-h: 52px; }
+  .cl-appshell.cl-appshell--no-header .cl-appshell__header { display: flex; }
+  .cl-appshell .cl-appshell__menu { display: inline-flex; }
+  .cl-appshell .cl-appshell__navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 91;
+    width: min(280px, 85vw);
+    height: auto;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 180ms ease, visibility 0s linear 180ms;
+    box-shadow: var(--shadow-lg);
+  }
+  .cl-appshell.cl-appshell--nav-open .cl-appshell__navbar {
+    transform: none;
+    visibility: visible;
+    transition: transform 180ms ease;
+  }
+  .cl-appshell.cl-appshell--nav-open .cl-appshell__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: var(--scrim);
+  }
+  .cl-appshell .cl-appshell__main { padding: 16px; }
+}
+
+/* ----- SideNav ----- */
+.cl-sidenav { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.cl-sidenav__links { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cl-sidenav__group { display: flex; flex-direction: column; gap: 2px; }
+.cl-sidenav__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 14px 10px 6px;
+}
+.cl-sidenav__footer {
+  margin: 12px -10px -12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-soft);
+}
+.cl-navlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+.cl-navlink:hover { background: var(--control-hover); color: var(--fg); }
+.cl-navlink:focus-visible { outline: 2px solid var(--ice); outline-offset: -2px; }
+.cl-navlink--active,
+.cl-navlink[aria-current="page"] {
+  background: var(--ice-bg);
+  color: var(--fg-bright);
+  box-shadow: inset 2px 0 0 var(--ice);
+}
+.cl-navlink__marker { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.cl-navlink__icon { display: inline-flex; flex: none; color: currentColor; }
+.cl-navlink__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-navlink__count {
+  flex: none;
+  min-width: 18px;
+  box-sizing: border-box;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ----- Toasts ----- */
+.cl-toasts {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 9px;
+  width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
+}
+.cl-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  box-sizing: border-box;
+  padding: 9px 8px 9px 12px;
+  background: var(--control);
+  border: 1px solid var(--border-control);
+  border-left: 3px solid var(--toast-color, var(--ice));
+  border-radius: 9px;
+  box-shadow: var(--shadow-md);
+  color: var(--fg);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  cursor: pointer;
+  animation: cl-toast-in 160ms ease-out;
+}
+.cl-toast__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--toast-color, var(--ice));
+  flex: none;
+}
+.cl-toast__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cl-toast__close {
+  flex: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.cl-toast__close:hover { color: var(--fg); background: var(--control-hover); }
+.cl-toast__close:focus-visible { outline: 2px solid var(--ice); outline-offset: 1px; }
+@keyframes cl-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@media (max-width: 480px) {
+  .cl-toasts { left: 12px; right: 12px; bottom: 12px; width: auto; }
+}
+
+/* ----- Tabs -----
+   An underline tab list. It is a navigation between views, so it looks
+   different from SegmentedControl (a boxed choice between values). */
+.cl-tabs { display: flex; flex-direction: column; gap: 16px; }
+.cl-tabs__list {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cl-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 9px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.cl-tabs__tab:hover { color: var(--fg); background: var(--control-hover); }
+.cl-tabs__tab:focus-visible { outline: 2px solid var(--ice); outline-offset: -2px; }
+.cl-tabs__tab--active,
+.cl-tabs__tab[aria-selected="true"] {
+  color: var(--fg-bright);
+  border-bottom-color: var(--ice);
+}
+.cl-tabs__tab:disabled,
+.cl-tabs__tab[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.cl-tabs__count {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--muted-bg);
+  color: var(--muted-fg);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+.cl-tabs__tab--active .cl-tabs__count { background: var(--ice-bg); color: var(--ice-fg); }
+.cl-tabs__panel:focus-visible { outline: 2px solid var(--ice); outline-offset: 4px; border-radius: var(--radius-sm); }
+
+/* ----- Card ----- */
+.cl-card {
+  display: block;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: 14px 16px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.cl-card__title { font-size: 13.5px; font-weight: 600; color: var(--fg-bright); margin-bottom: 6px; }
+.cl-card--interactive {
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.cl-card--interactive:hover {
+  background: var(--panel-2);
+  border-color: var(--border-control);
+  box-shadow: var(--shadow-sm);
+}
+.cl-card--interactive:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.cl-card--selected { border-color: var(--ice); box-shadow: inset 0 0 0 1px var(--ice); }
+
+/* No motion when the OS asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  .cl-modal,
+  .cl-drawer,
+  .cl-toast,
+  .cl-btn__spinner { animation: none; }
+  .cl-appshell .cl-appshell__navbar,
+  .cl-appshell.cl-appshell--nav-open .cl-appshell__navbar,
+  .cl-card--interactive { transition: none; }
+}
 
 /* ============================================================
    Layer 2 — data-display widgets (generic)

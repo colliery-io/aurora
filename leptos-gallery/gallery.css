@@ -105,3 +105,9 @@ html { scroll-behavior: smooth; }
   border-radius: var(--radius-panel);
   padding: 18px;
 }
+
+/* Narrow screens: the gallery's own nav leaves, so the page fits. */
+@media (max-width: 768px) {
+  .gallery-nav { display: none; }
+  .gallery-main { padding: 24px 16px 80px; }
+}
