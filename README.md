@@ -1,24 +1,26 @@
-# Aurora Dark — Leptos design pack (`colliery-io-aurora`)
+# Aurora — Leptos design pack (`colliery-io-aurora`)
 
 [![crates.io](https://img.shields.io/crates/v/colliery-io-aurora.svg)](https://crates.io/crates/colliery-io-aurora)
 [![docs.rs](https://docs.rs/colliery-io-aurora/badge.svg)](https://docs.rs/colliery-io-aurora)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
-Colliery's **general dark design system for [Leptos](https://leptos.dev)** —
-the Aurora Dark identity (tokens, components, data-display widgets, stylesheet)
-as a reusable Rust/WASM crate. It's the core that control-plane apps (cloacina
+Colliery's **design system for [Leptos](https://leptos.dev)**, with a light
+and a dark theme — the Aurora identity (tokens, components, data-display
+widgets, stylesheet) as a reusable Rust/WASM crate. Aurora was formerly called
+"Aurora Dark"; the crate name (`colliery-io-aurora`) and the repository name
+(`aurora-dark`) stay. It's the core that control-plane apps (cloacina
 included) are built from; app-specific vocab, colors, and branding are supplied
 as data, not shipped.
 
 ## When to use this
-Reach for `colliery-io-aurora` when you're building a **dark, control-plane / dashboard
+Reach for `colliery-io-aurora` when you're building a **control-plane / dashboard
 Leptos UI** for a Colliery project and want the chrome handled: design tokens, the
 full primitive set (layout, inputs, overlays, tables), async-state components
 (`Loading`/`Empty`/`ErrorState`), data-display widgets (status pills, freshness
 meters, readiness panels), and graph/DAG drawing — so you build screens, not a
 component library. You supply the meaning (state→color/label maps, copy, branding)
-as data. **Not** the right fit for light-themed UIs, non-Leptos stacks, or a
-general public-facing marketing site. See
+as data. **Not** the right fit for non-Leptos stacks or a general public-facing
+marketing site. See
 [`aurora-leptos/PATTERNS.md`](./aurora-leptos/PATTERNS.md) for which component to
 reach for, task by task.
 
@@ -28,12 +30,13 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
   src/
     lib.rs           #   public API: components, tokens, AURORA_CSS / <AuroraStyles/>
     components.rs    #   core components (primitives)
-    tokens.rs        #   semantic tokens + error classification
+    tokens.rs        #   semantic tokens (CSS variables) + error classification
+    theme.rs         #   light / dark / system: ThemeToggle, set_theme, init script
     widgets.rs       #   generic data-display widgets (Meter, Banner, …)
     hlin.rs          #   `hlin` feature: Aurora as a Hlin design pack
     hlin.css         #     the chrome that module needs, embedded in it
   style/             #   framework-agnostic stylesheet, shipped with the crate
-    tokens.css       #     Aurora Dark tokens (colors, spacing, radii, type scale)
+    tokens.css       #     Aurora tokens: light + dark colours, spacing, radii, type scale
     components.css   #     every component's static chrome
     fonts.css        #     IBM Plex @font-face
   PATTERNS.md        #   usage guide — when to reach for each component
@@ -101,6 +104,76 @@ leptos for the host.
 Fonts load from Google Fonts at runtime — self-host if you ship fully offline.
 Prefer `rev`/`tag` over `branch`. See `aurora-leptos/PATTERNS.md` for which
 component to use, and `aurora-leptos/README.md` for the API.
+
+## Light and dark theme
+
+Aurora has a light and a dark theme. By default the page follows the operating
+system (`prefers-color-scheme`), and changes when the OS setting changes. The
+`data-theme` attribute on `<html>` forces a theme:
+
+| `<html>` | Theme |
+|---|---|
+| no `data-theme` | follows the OS |
+| `data-theme="light"` | light |
+| `data-theme="dark"` | dark |
+
+Each colour token holds both values: `--bg: light-dark(<light>, <dark>)` in
+`style/tokens.css`. The attribute sets `color-scheme`, and the browser picks the
+value. Native controls (scrollbars, select popups) follow too.
+
+To keep a product dark for now, put `data-theme="dark"` on its `<html>`.
+
+**Let the user choose.** Put the toggle in your top bar, and call
+`provide_theme()` once at the root:
+
+```rust
+use aurora_leptos::theme::{provide_theme, ThemeToggle};
+
+#[component]
+fn App() -> impl IntoView {
+    provide_theme();
+    view! { <header> /* ... */ <ThemeToggle /> </header> }
+}
+```
+
+`ThemeToggle` shows Light / Dark / System. The choice is stored in
+`localStorage` under `aurora-theme`. If storage is not available, the page
+follows the OS and shows no error. Without the component, use
+`set_theme(Theme::Dark)`, `current_theme()`, or `use_theme()` (a
+`ThemeContext` with a `choice` signal and a live `system_dark` signal).
+
+**No flash at load.** Put `aurora_leptos::THEME_INIT_SCRIPT` in an inline
+`<script>` in the `<head>`, before the stylesheet. It sets `data-theme` from
+storage before the first paint. Copy it from `leptos-gallery/index.html`:
+
+```html
+<meta name="color-scheme" content="light dark" />
+<script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"){var d=document.documentElement;d.setAttribute("data-theme",t);d.style.colorScheme=t;}}catch(e){}})();</script>
+<link data-trunk rel="css" href="style/aurora.css" />
+```
+
+## Colour tokens
+
+In Rust, `token::*` are CSS variable references (`token::ICE` is
+`"var(--ice)"`), so an inline style follows the theme. Do not add hex alpha to
+them (`format!("{}1c", token::ICE)` does not work); use `tint(color, pct)`,
+`fill_for(color)` or `pill_bg(color)`.
+
+Each status hue has three tokens:
+
+| Token | Rust | Use |
+|---|---|---|
+| `--x` | `token::X` | the hue: dots, meters, count badges, and text on a page or panel |
+| `--x-fg` | `token::X_FG` | text on the `--x-bg` fill (pills, badges) |
+| `--x-bg` | `token::X_BG` | the tinted fill behind `--x-fg` |
+
+`x` is `ice`, `teal`, `violet`, `gold`, `ok`, `bad`, `skip` or `muted`. Text on a
+solid hue fill uses `--on-status` (`token::ON_STATUS`). `Pill` and `StatusBadge`
+use the pair when you give them a hue token.
+
+All text/fill pairs meet WCAG AA in both themes. `tests/contrast.rs` checks
+them; `tests/no_raw_colours.rs` refuses a raw colour (hex, `rgb()`, `hsl()`)
+anywhere in the crate or the gallery outside `style/tokens.css`.
 
 ## Drawing a Hlin surface
 

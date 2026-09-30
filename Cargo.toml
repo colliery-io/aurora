@@ -1,4 +1,4 @@
-# Workspace for the Aurora Dark Leptos design system + its gallery example.
+# Workspace for the Aurora Leptos design system + its gallery example.
 [workspace]
 resolver = "2"
 members = ["aurora-leptos", "leptos-gallery"]

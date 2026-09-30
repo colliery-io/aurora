@@ -4,7 +4,7 @@
 //! claiming generic names); the library itself is imported as `aurora_leptos`.
 //!
 //! A general design system for Leptos, with a light and a dark theme, reused
-//! across Colliery projects (formerly "Aurora Dark"). It
+//! across Colliery projects. It
 //! is the **core that control-plane apps (cloacina included) are built from** —
 //! everything below is first-class core, not an optional add-on:
 //!

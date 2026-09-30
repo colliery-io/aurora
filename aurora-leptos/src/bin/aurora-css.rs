@@ -1,4 +1,4 @@
-//! `aurora-css [dir]` — writes the Aurora Dark stylesheet to `dir/aurora.css`
+//! `aurora-css [dir]` — writes the Aurora stylesheet to `dir/aurora.css`
 //! (default `style/`). Leptos-free; run it from a build hook (e.g. a trunk
 //! `pre_build` hook) so the app can `<link>` a real, render-blocking stylesheet:
 //!

@@ -1,4 +1,4 @@
-# Generate the Aurora Dark stylesheet before trunk processes assets, so the
+# Generate the Aurora stylesheet before trunk processes assets, so the
 # <link> in index.html resolves. Dogfoods aurora_leptos::write_css (via the
 # leptos-free `aurora-css` bin). `-p colliery-io-aurora` works because this
 # gallery is a workspace member; an external consumer would `cargo install` the

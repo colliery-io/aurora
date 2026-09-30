@@ -1,8 +1,8 @@
 # aurora-leptos
 
-**Colliery's general dark design system for [Leptos](https://leptos.dev).** Aurora
-Dark — semantic tokens, a complete set of UI components + data-display widgets, and
-the stylesheet — the **core that control-plane apps are built from** (cloacina
+**Colliery's design system for [Leptos](https://leptos.dev), with a light and a
+dark theme.** Aurora — semantic tokens, a complete set of UI components +
+data-display widgets, and the stylesheet — the **core that control-plane apps are built from** (cloacina
 included). Everything is first-class core; nothing is a gated optional add-on. Only
 genuinely app-specific surfaces (e.g. cloacina's DAG/graph + node views) are built
 downstream from these primitives.
@@ -42,8 +42,13 @@ fn App() -> impl IntoView {
   `Loader`.
 - **Aurora** — `Pill` · `StatusBadge` · `Dot` · `Panel` · `PageHeader` · `Chip` ·
   `Loading` · `Empty` · `ErrorState`.
-- **tokens** — semantic palette (`token::*`), `status_color`, `pill_bg`, and
-  `classify` over an `ApiError`. Pure, framework-agnostic Rust.
+- **tokens** — semantic palette (`token::*`, CSS variable references such as
+  `"var(--ice)"`), a text/fill pair per status hue (`token::OK_FG`,
+  `token::OK_BG`), `status_color`, `pill_bg` / `fill_for` / `fg_for` / `tint`,
+  and `classify` over an `ApiError`. Pure, framework-agnostic Rust.
+- **theme** — `ThemeToggle` (Light / Dark / System), `set_theme`,
+  `current_theme`, `provide_theme` / `use_theme`, and `THEME_INIT_SCRIPT` for a
+  first paint with no flash. See the workspace README, "Light and dark theme".
 
 ## Widgets (`widgets`, also core)
 Generic, higher-level data-display building blocks. Vocabulary is generic dataflow

@@ -46,8 +46,9 @@ widgets take state labels/colors/tooltips as data — apps supply their own voca
 
 | Component / export | Notes |
 |---|---|
-| `MONO` / `tokens::token` | Mono helper (`.cl-mono`) + hex palette. |
-| `Pill` · `StatusBadge` · `Dot` | Status hue on a `1c`-alpha tint; status dot. |
+| `MONO` / `tokens::token` | Mono helper (`.cl-mono`) + palette as CSS variables (`var(--ice)`). |
+| `Pill` · `StatusBadge` · `Dot` | Status text token (`--x-fg`) on its fill token (`--x-bg`); status dot. |
+| `ThemeToggle` | Light / Dark / System choice, stored in the browser. |
 | `Panel` · `PageHeader` · `Chip` | Card surface; page title; filter chip. |
 | `Loading` · `Empty` · `ErrorState` | Async-view states (error renders by classified kind). |
 | `Meter` | Freshness/progress bar. |
@@ -59,8 +60,9 @@ widgets take state labels/colors/tooltips as data — apps supply their own voca
 | `InputTable` | Per-input state/last-event/rate/freshness/action (`Input` model). |
 
 ### Pure logic (`tokens.rs`)
-Semantic palette (`token::*`), `status_color`, `pill_bg`, and `ApiError`
-classification. Framework-agnostic Rust — the seam where typed API models plug in.
+Semantic palette (`token::*`), `status_color`, `pill_bg` / `fill_for` /
+`fg_for` / `tint`, and `ApiError` classification. `theme.rs` holds the `Theme`
+type and `THEME_INIT_SCRIPT`. Framework-agnostic Rust — the seam where typed API models plug in.
 
 ## Built downstream (not shipped by the pack)
 App branding (e.g. a logo mark) and app-specific state vocab/colors are supplied

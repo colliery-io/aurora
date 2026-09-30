@@ -1,4 +1,4 @@
-# Aurora Dark — patterns & usage guide
+# Aurora — patterns & usage guide
 
 How to choose and compose `aurora-leptos` pieces. Written for both people and AI
 agents building Colliery Leptos UIs. Read **Core model** first, then use the
@@ -13,11 +13,16 @@ pieces** when two options look alike.
    for setup): runtime injection via `<AuroraStyles/>` (simplest; possible flash),
    or a `<link>`ed `style/aurora.css` for no flash (emit it from `build.rs` under
    cargo-leptos, or a trunk `pre_build` hook). Without one, components render unstyled.
-2. **Dark only.** There is no light theme. Surfaces/text/accents come from CSS
-   custom properties (`--bg`, `--panel`, `--fg`, `--ice`, …).
-3. **Use tokens, not raw hex.** In Rust use `token::ICE` etc.; in CSS use
-   `var(--ice)`. Status meaning comes from `status_color(&str)`. Never hardcode
-   `#7fb2ff`.
+2. **Light and dark.** Surfaces/text/accents come from CSS custom properties
+   (`--bg`, `--panel`, `--fg`, `--ice`, …). Each has a light and a dark value.
+   The page follows the OS; `data-theme="light"`/`"dark"` on `<html>` forces
+   one. Put `ThemeToggle` in the top bar and `THEME_INIT_SCRIPT` in the
+   `<head>` (see the README, "Light and dark theme").
+3. **Use tokens, not raw colours.** In Rust use `token::ICE` etc. (they are
+   `var(--ice)` strings); in CSS use `var(--ice)`. Status meaning comes from
+   `status_color(&str)`. Never hardcode a hex value: it does not change with the
+   theme, and `tests/no_raw_colours.rs` refuses it in this crate. Do not add hex
+   alpha to a token; use `tint(token::ICE, 12)` or `fill_for(token::ICE)`.
 4. **The pack renders; the app supplies meaning.** Data-driven values — a status
    color, a state label, a tooltip string, a brand mark — are passed in as props.
    The pack ships no app vocabulary or logo. (e.g. a `HealthPill` takes
@@ -58,6 +63,7 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | A short status tag | `StatusBadge` (status string) · `Pill` (custom hue) · `HealthPill` (+tooltip) | see comparison below |
 | A small status dot | `Dot` | `color`, `glow` |
 | A filter toggle | `Chip` | `active: Signal<bool>` |
+| Let the user choose light / dark / system | `ThemeToggle` | call `provide_theme()` once at the root |
 | Loading / empty / error states | `Loading` / `Empty` / `ErrorState` | every async view should use these |
 | An inline notice / callout | `Banner` (transient) · `Alert` (in-content) | — |
 | Counts per state | `StateCounts` | `Vec<StateCount{label,count,color}>` |
@@ -179,9 +185,11 @@ you want the built-in positions for custom rendering.
 
 ## Tokens
 
-- **Surfaces**: `--bg --sidebar --panel --panel-2 --inset --control --border --border-soft --edge`
-- **Text**: `--fg --fg-bright --fg-2 --muted --faint`
-- **Accents/status**: `--ice --teal --violet --gold --ok --bad --skip` (Rust: `token::*`)
+- **Surfaces**: `--bg --sidebar --panel --panel-2 --inset --field --control --control-hover --border --border-soft --border-fainter --border-control --edge`
+- **Text**: `--fg --fg-bright --fg-2 --fg-strong --muted --faint --fainter` (`--fainter`: large text, disabled and decoration only)
+- **Accents/status**: `--ice --teal --violet --gold --ok --bad --skip --muted` (Rust: `token::*`)
+- **Status pairs**: `--x-fg` (text) on `--x-bg` (fill) for each hue above (Rust: `token::X_FG`, `token::X_BG`); `--on-status` for text on a solid hue
+- **Overlays**: `--tooltip-bg --tooltip-fg --tooltip-border --scrim --shadow-sm --shadow-md --shadow-lg --scrollbar`
 - **Scales**: `--space-{xs..xl}`, `--radius-{xs..xl}` + `--radius-pill/panel/chip`,
   `--fs-{xs..xl}`, `--h-{xs,sm,md}` (control heights), `--font-sans`/`--font-mono`.
 
@@ -196,6 +204,6 @@ status, call `status_color(s)` (or your own map) and pass it as a prop.
 2. Render `<AuroraStyles/>` once (or link the CSS files).
 3. Reach for an existing component via **Pick by intent** before writing markup.
 4. Bind inputs to `RwSignal`s; pass handlers as `Callback`s.
-5. Use `token::*` / `var(--…)` and `status_color` — never invent classes or hex.
+5. Use `token::*` / `var(--…)` and `status_color` — never invent classes or raw colours.
 6. Supply app-specific labels/colors/branding as **data**; don't add them to the pack.
 7. Wrap async UI in `Loading`/`Empty`/`ErrorState`.

@@ -18,3 +18,12 @@ fn the_gallery_puts_the_init_script_in_its_head() {
         "the init script must come before the stylesheet"
     );
 }
+
+#[test]
+fn the_readme_shows_the_same_script() {
+    let readme = include_str!("../../README.md");
+    assert!(
+        readme.contains(THEME_INIT_SCRIPT),
+        "README.md must show THEME_INIT_SCRIPT exactly"
+    );
+}
