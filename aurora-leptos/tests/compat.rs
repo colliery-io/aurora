@@ -66,6 +66,15 @@ fn new_props() -> impl IntoView {
             option_pairs=vec![("1".to_string(), "One".to_string())]
             on_change=Callback::new(|_s: String| {}) disabled=busy />
         <Switch checked=busy disabled=true on_change=Callback::new(|_b: bool| {}) />
+        // Attributes the component has no prop for go on its root element.
+        <Button attr:style="width:100%" attr:data-testid="save">"Save"</Button>
+        <Table fixed=true widths=vec!["22%".into(), "52px".into()] min_width="640px">
+            <thead><tr><SortHeader label="Run" key="id" sort=RwSignal::new(SortState::default()) /></tr></thead>
+            <tbody>
+                <TableRow on_click=Callback::new(|_| {})><td>"x"</td></TableRow>
+                <TableEmpty colspan=1 message="No rows." />
+            </tbody>
+        </Table>
     }
 }
 

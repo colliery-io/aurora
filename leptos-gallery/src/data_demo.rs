@@ -359,7 +359,7 @@ pub fn DataSections() -> impl IntoView {
                 <Stack>
                     <Group gap="sm" wrap=true>
                         <Switch checked=locked label="Lock the form" />
-                        <Button loading=saving loading_label="Saving…" disabled=locked
+                        <Button attr:data-testid="demo-save" loading=saving loading_label="Saving…" disabled=locked
                             on_click=Callback::new(move |_| {
                                 saving.set(true);
                                 set_timeout(move || saving.set(false), Duration::from_millis(1800));
