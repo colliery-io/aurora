@@ -65,7 +65,7 @@ generic names in the flat crates.io namespace); the library is still imported as
 
 ```toml
 [dependencies]
-colliery-io-aurora = "0.1"
+colliery-io-aurora = "0.4"
 leptos = { version = "0.8", features = ["csr"] }   # match 0.8.x; binary picks the renderer
 ```
 

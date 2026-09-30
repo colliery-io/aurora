@@ -12,7 +12,7 @@ Published on crates.io as **`colliery-io-aurora`**; the library is imported as
 
 ```toml
 [dependencies]
-colliery-io-aurora = "0.1"                               # or { path = "../aurora-leptos" } in-workspace
+colliery-io-aurora = "0.4"                               # or { path = "../aurora-leptos" } in-workspace
 leptos = { version = "0.8", features = ["csr"] }         # the binary picks the renderer
 ```
 
