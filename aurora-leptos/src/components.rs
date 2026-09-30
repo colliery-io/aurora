@@ -5,6 +5,7 @@
 //! so reactivity is expressed with closures and `Callback`s rather than
 //! re-rendering whole components.
 
+use leptos::context::Provider;
 use leptos::prelude::*;
 
 use crate::tokens::{classify, fg_for, fill_for, tint, ApiError};
@@ -1069,10 +1070,13 @@ pub fn Menu(
     let trigger_ref = NodeRef::<leptos::html::Button>::new();
     let root = NodeRef::<leptos::html::Div>::new();
     let list_ref = NodeRef::<leptos::html::Div>::new();
-    provide_context(MenuCtx {
+    // Given to the items through a `Provider` (its own owner), not
+    // `provide_context` here: a component has no owner of its own, so two
+    // menus on one page would share the context of the last one.
+    let ctx = MenuCtx {
         open,
         trigger: trigger_ref,
-    });
+    };
     // Which item takes focus when the list opens: Some(true) first,
     // Some(false) last.
     let focus_on_open = StoredValue::new(None::<bool>);
@@ -1230,7 +1234,7 @@ pub fn Menu(
                         role="menu"
                         on:keydown=on_list_key
                     >
-                        {children.with_value(|c| c())}
+                        <Provider value=ctx>{children.with_value(|c| c())}</Provider>
                     </div>
                 }
             })}
@@ -1457,6 +1461,9 @@ pub fn CopyButton(
 /// - `widths`: the column widths (`vec!["22%".into(), "52px".into()]`), as a
 ///   `<colgroup>`. Two tables with the same widths line up.
 /// - `label`: the accessible name of the table.
+/// - `min_width` (optional, such as `"640px"`): the table does not get
+///   narrower than this; on a small screen it scrolls sideways in its own
+///   box, and the page does not.
 ///
 /// The class `cl-num` on a `th` or `td` aligns a number to the right.
 #[component]
@@ -1465,6 +1472,7 @@ pub fn Table(
     #[prop(optional)] fixed: bool,
     #[prop(optional)] widths: Vec<String>,
     #[prop(optional, into)] label: String,
+    #[prop(optional, into)] min_width: String,
     children: Children,
 ) -> impl IntoView {
     let mut class = String::from("cl-table");
@@ -1481,7 +1489,19 @@ pub fn Table(
             </colgroup>
         }
     });
-    view! { <table class=class aria-label=attr(label)>{cols}{children()}</table> }
+    if min_width.is_empty() {
+        return view! { <table class=class aria-label=attr(label)>{cols}{children()}</table> }
+            .into_any();
+    }
+    view! {
+        <div class="cl-table-scroll">
+            <table class=class aria-label=attr(label) style=format!("min-width:{min_width};")>
+                {cols}
+                {children()}
+            </table>
+        </div>
+    }
+    .into_any()
 }
 
 /// A table row that a person can click or open with the keyboard.

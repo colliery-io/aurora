@@ -1126,9 +1126,15 @@ pub fn FeedRow(
         None if !time.is_empty() => view! { <span class="cl-feed__time">{time}</span> }.into_any(),
         None => view! { <span class="cl-feed__time"></span> }.into_any(),
     };
-    let dot_view = (!dot.is_empty()).then(|| {
+    // The dot slot is always there, so the subjects line up in a list where
+    // only some rows have a dot.
+    let dot_view = if dot.is_empty() {
+        view! { <span class="cl-feed__dot cl-feed__dot--none" aria-hidden="true"></span> }
+            .into_any()
+    } else {
         view! { <span class="cl-feed__dot" style=format!("background:{dot};") aria-hidden="true"></span> }
-    });
+            .into_any()
+    };
     let subject_view =
         (!subject.is_empty()).then(|| view! { <span class="cl-feed__subject">{subject}</span> });
     let actor_view =
