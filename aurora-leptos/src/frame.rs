@@ -23,6 +23,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
+use leptos::context::Provider;
 use leptos::html;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
@@ -1278,10 +1279,14 @@ pub fn Tabs(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let base = next_id("tabs");
-    provide_context(TabsCtx {
+    // Given to the panels through a `Provider` (its own owner), not
+    // `provide_context`: with two tab lists on one page, a panel must find
+    // its own list, and not the list that rendered last (the fault that
+    // `Menu` had).
+    let ctx = TabsCtx {
         base: StoredValue::new(base.clone()),
         value,
-    });
+    };
     let has_panels = children.is_some();
     let disabled: Vec<bool> = tabs.iter().map(|t| t.disabled).collect();
     let values: Vec<String> = tabs.iter().map(|t| t.value.clone()).collect();
@@ -1400,7 +1405,7 @@ pub fn Tabs(
     view! {
         <div class="cl-tabs">
             <div class="cl-tabs__list" role="tablist" aria-label=aria_label>{items}</div>
-            {children.map(|c| c())}
+            {children.map(|c| view! { <Provider value=ctx>{c()}</Provider> })}
         </div>
     }
 }
