@@ -108,10 +108,15 @@ fn App() -> impl IntoView {
         ..Default::default()
     };
     let mixed_inputs = vec![
-        Input { manual_events: Some(3), last_manual_event_at: Some(now - 600000.0),
-            ..input("orders.events", "live", fresh, 18240) },
-        Input { error: Some("connection refused (econnrefused 10.0.4.12:5432)".into()),
-            ..input("inventory.snapshots", "unreachable", Some(now - 9.0e8), 312) },
+        Input {
+            manual_events: Some(3),
+            last_manual_event_at: Some(now - 600000.0),
+            ..input("orders.events", "live", fresh, 18240)
+        },
+        Input {
+            error: Some("connection refused (econnrefused 10.0.4.12:5432)".into()),
+            ..input("inventory.snapshots", "unreachable", Some(now - 9.0e8), 312)
+        },
         input("shipments.tracking", "warming", None, 0),
     ];
     let mixed_inputs_table = mixed_inputs.clone();
@@ -121,16 +126,40 @@ fn App() -> impl IntoView {
         input("inventory.snapshots", "unreachable", Some(now - 9.0e8), 312),
     ];
     let run_counts = vec![
-        StateCount { label: "running".into(), count: 1, color: token::ICE.into() },
-        StateCount { label: "completed".into(), count: 3, color: token::OK.into() },
-        StateCount { label: "failed".into(), count: 1, color: token::BAD.into() },
-        StateCount { label: "scheduled".into(), count: 1, color: token::VIOLET.into() },
+        StateCount {
+            label: "running".into(),
+            count: 1,
+            color: token::ICE.into(),
+        },
+        StateCount {
+            label: "completed".into(),
+            count: 3,
+            color: token::OK.into(),
+        },
+        StateCount {
+            label: "failed".into(),
+            count: 1,
+            color: token::BAD.into(),
+        },
+        StateCount {
+            label: "scheduled".into(),
+            count: 1,
+            color: token::VIOLET.into(),
+        },
     ];
     let g_nodes = vec![
-        GraphNode::new("orders", "orders.events").color(token::ICE).sublabel("source"),
-        GraphNode::new("clicks", "clicks.stream").color(token::ICE).sublabel("source"),
-        GraphNode::new("rollup", "rollup").color(token::VIOLET).sublabel("node"),
-        GraphNode::new("warehouse", "warehouse").color(token::TEAL).sublabel("sink"),
+        GraphNode::new("orders", "orders.events")
+            .color(token::ICE)
+            .sublabel("source"),
+        GraphNode::new("clicks", "clicks.stream")
+            .color(token::ICE)
+            .sublabel("source"),
+        GraphNode::new("rollup", "rollup")
+            .color(token::VIOLET)
+            .sublabel("node"),
+        GraphNode::new("warehouse", "warehouse")
+            .color(token::TEAL)
+            .sublabel("sink"),
     ];
     let g_edges = vec![
         GraphEdge::new("orders", "rollup").active(true),
@@ -160,7 +189,12 @@ fn App() -> impl IntoView {
         })
         .collect_view();
 
-    let chips = [("All", 128), ("Running", 4), ("Failed", 11), ("Scheduled", 7)];
+    let chips = [
+        ("All", 128),
+        ("Running", 4),
+        ("Failed", 11),
+        ("Scheduled", 7),
+    ];
     let chip_views = chips
         .iter()
         .enumerate()

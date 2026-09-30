@@ -239,9 +239,18 @@ pub fn Modal(
     view! {
         {move || open.get().then(|| {
             let title = title.clone();
+            let aria_title = title.clone();
             view! {
                 <div class="cl-modal-overlay" on:click=move |_| open.set(false)>
-                    <div class="cl-modal" on:click=|e| e.stop_propagation()>
+                    // ARIA dialog semantics: assistive tech and role-based
+                    // selectors resolve the modal as a dialog named by its title.
+                    <div
+                        class="cl-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label=aria_title.clone()
+                        on:click=|e| e.stop_propagation()
+                    >
                         <div class="cl-modal__header">
                             <span class="cl-modal__title">{title}</span>
                             <button class="cl-modal__close" on:click=move |_| open.set(false)>"×"</button>
@@ -312,7 +321,9 @@ pub fn PageHeader(
     view! {
         <div class="cl-page-header">
             <div>
-                <div class="cl-page-header__title">{title}</div>
+                // A real heading element: the page title carries the ARIA
+                // heading role for assistive tech and role-based selectors.
+                <h1 class="cl-page-header__title">{title}</h1>
                 {has_sub.then(|| view! { <div class="cl-page-header__sub">{sub}</div> })}
             </div>
             {right.map(|r| r())}
@@ -365,7 +376,10 @@ pub fn Empty(#[prop(into)] message: String) -> impl IntoView {
 }
 
 #[component]
-pub fn ErrorState(error: ApiError, #[prop(optional)] on_retry: Option<Callback<()>>) -> impl IntoView {
+pub fn ErrorState(
+    error: ApiError,
+    #[prop(optional)] on_retry: Option<Callback<()>>,
+) -> impl IntoView {
     let c = classify(&error);
     let style = format!("--alert-color:var({});", c.color_var);
     let code = c.code.clone();
@@ -409,7 +423,11 @@ pub fn Code(children: Children) -> impl IntoView {
 /// Accent text link (Mantine `Anchor`).
 #[component]
 pub fn Anchor(#[prop(optional, into)] href: String, children: Children) -> impl IntoView {
-    let href = if href.is_empty() { "#".to_string() } else { href };
+    let href = if href.is_empty() {
+        "#".to_string()
+    } else {
+        href
+    };
     view! { <a class="cl-anchor" href=href>{children()}</a> }
 }
 
@@ -479,10 +497,7 @@ pub fn Alert(
 /// label is also then part of the click target, which it always looked like it
 /// was.
 #[component]
-pub fn Switch(
-    checked: RwSignal<bool>,
-    #[prop(optional, into)] label: String,
-) -> impl IntoView {
+pub fn Switch(checked: RwSignal<bool>, #[prop(optional, into)] label: String) -> impl IntoView {
     let has_label = !label.is_empty();
     view! {
         <button
@@ -564,7 +579,11 @@ pub fn NumberInput(
     let has_label = !label.is_empty();
     let fmt = move || {
         let v = value.get();
-        if v.fract() == 0.0 { format!("{}", v as i64) } else { format!("{v}") }
+        if v.fract() == 0.0 {
+            format!("{}", v as i64)
+        } else {
+            format!("{v}")
+        }
     };
     let id = field_id();
     view! {
@@ -772,7 +791,11 @@ pub fn CopyButton(#[prop(into)] value: String) -> impl IntoView {
 /// children inside. Set `mono` for tabular monospace cells.
 #[component]
 pub fn Table(#[prop(optional)] mono: bool, children: Children) -> impl IntoView {
-    let class = if mono { "cl-table cl-table--mono" } else { "cl-table" };
+    let class = if mono {
+        "cl-table cl-table--mono"
+    } else {
+        "cl-table"
+    };
     view! { <table class=class>{children()}</table> }
 }
 
