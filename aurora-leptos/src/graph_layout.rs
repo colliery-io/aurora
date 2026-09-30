@@ -978,14 +978,16 @@ pub fn layout(
             let last = chain.items.len() - 1;
             for (at, &i) in chain.items.iter().enumerate() {
                 let c = across_c(items[i].layer);
-                let a = if at == 0 {
-                    c + half
+                if at == 0 {
+                    pts.push((c + half, coord[i]));
                 } else if at == last {
-                    c - half
+                    pts.push((c - half, coord[i]));
                 } else {
-                    c
-                };
-                pts.push((a, coord[i]));
+                    // A dummy crosses its layer in a straight line, from
+                    // face to face, so the curve bends only in the gaps.
+                    pts.push((c - half, coord[i]));
+                    pts.push((c + half, coord[i]));
+                }
             }
             if chain.reversed {
                 // The source is in the higher layer: the route leaves its
@@ -1383,9 +1385,15 @@ mod tests {
             .iter()
             .find(|e| e.from == "a" && e.to == "c")
             .unwrap();
-        assert_eq!(long.points.len(), 3, "start, one dummy, end");
+        assert_eq!(long.points.len(), 4, "start, the dummy (two faces), end");
         let b = placed(&l, "b");
         let (_, dummy_y) = long.points[1];
+        assert_eq!(
+            long.points[1].1, long.points[2].1,
+            "straight across the layer"
+        );
+        assert_eq!(long.points[1].0, b.x);
+        assert_eq!(long.points[2].0, b.x + b.w);
         assert!(
             dummy_y < b.y || dummy_y > b.y + b.h,
             "the dummy point is not inside b: {dummy_y} vs {}..{}",

@@ -72,7 +72,7 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | A data table | `Table` (generic) · `InputTable` (sources + freshness) | see comparison |
 | Readiness of N inputs | `NodeReadiness` | trigger summary + per-input freshness |
 | Warn about stale sources | `StaleInputsBanner` | renders nothing when all fresh |
-| Draw a graph / DAG | `Graph` | auto-layout from nodes + edges |
+| Draw a graph / DAG | `Dag` (+ `DagLegend`) | Aurora does the layout and the interaction; old `Graph` still works |
 
 ---
 
@@ -164,22 +164,61 @@ The `Input` model is display-oriented — the app fills `state_label`/`state_col
 `freshness_pct` / `format_ago` are time helpers you can reuse.
 
 ### Graph / DAG
-`Graph{nodes:Vec<GraphNode>, edges:Vec<GraphEdge>, direction}` with a built-in
-layered layout (`"TB"` default, or `"LR"`). Build nodes/edges fluently:
+Aurora owns the layout and the interaction of the graph. The product gives
+only the data. Use `Dag`:
+
+- `DagNode::new(id, label)` with `.sublabel()`, `.detail()`, `.status(Hue::Ok)`,
+  `.layer(n)` (a fixed column), `.lane(id)` (a containment band),
+  `.current()`, `.archived()`, `.done()`, `.mark("done", Hue::Ok)`, `.more(n)`
+  (a "+N" badge), `.sort_key()`.
+- `DagEdge::new(from, to).style("ok")`. The product names the styles:
+  `EdgeStyle::new("ok", "Succeeded", Hue::Ok)`, `.dashed()`, `.animated()`.
+- Optional `DagLane::new(id, label).anchor(parent_id)` and `layers` (column
+  headers).
 
 ```rust
+let selected = RwSignal::new(None::<String>);
 let nodes = vec![
-    GraphNode::new("a", "orders").color(token::ICE).sublabel("source"),
-    GraphNode::new("b", "rollup").color(token::VIOLET),
+    DagNode::new("fetch", "fetch").status(Hue::Ok),
+    DagNode::new("load", "load").status(Hue::Ice),
 ];
-let edges = vec![ GraphEdge::new("a", "b").active(true) ];
-view! { <Graph nodes=nodes edges=edges /> }
+let edges = vec![DagEdge::new("fetch", "load").style("ok")];
+let styles = vec![EdgeStyle::new("ok", "Succeeded", Hue::Ok)];
+view! {
+    <Dag nodes edges styles legend=true
+         on_select=Callback::new(move |id: String| selected.set(Some(id)))
+         on_open=Callback::new(move |id: String| navigate_to(&id)) />
+}
 ```
 
-Use `Graph` when nodes are few–dozens and a layered layout reads well. For large
-graphs or when you need crossing-minimisation, compute positions with a dedicated
-layout crate (`layout-rs`/`rust-sugiyama`) and render — `layout_dag` is exposed if
-you want the built-in positions for custom rendering.
+Two shapes:
+- **Ranked DAG** (a workflow): give no `layer`. The ranks come from the edges,
+  left to right (`direction=Direction::TopBottom` for rows).
+- **Fixed layers with lanes** (flight levels): give each node a `layer` and a
+  `lane`, the lanes an `anchor`, and `layers=vec!["Strategy".into(), ...]`.
+  Use `align=Align::Start` for stacked columns. Containment is a lane, never
+  an edge.
+
+Interaction: click, Space, or Enter selects (`on_select`). Double click, or
+Enter on the selected node, opens (`on_open`). Hover or keyboard focus
+highlights the edges of a node and dims the rest. Tab moves through the
+nodes by layer. The "+N" badge calls `on_more`. Give `selected` to hold the
+selection in the product.
+
+Status is a class (`status-ok`, ...) from the `--x` / `--x-fg` / `--x-bg`
+tokens. Arrowheads use one marker per style, from the same tokens, so both
+themes work. `DagLegend styles=...` lists styles alone; `legend=true` shows
+the styles that the edges use.
+
+The layout is `graph_layout::layout`, a pure function (no DOM). Call it to
+draw the geometry in another way. It is deterministic, and the order of the
+input nodes does not change it. Limits: one lane per node, one size for all
+nodes, no self loops.
+
+The old API, `Graph{nodes:Vec<GraphNode>, edges:Vec<GraphEdge>, direction}`
+(`"TB"` default, or `"LR"`), still works. It is a thin wrapper over `Dag`: a
+`GraphNode` colour token becomes the status of the same hue, and
+`GraphEdge::active` becomes the `active` style.
 
 ---
 

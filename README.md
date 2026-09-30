@@ -33,11 +33,14 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
     tokens.rs        #   semantic tokens (CSS variables) + error classification
     theme.rs         #   light / dark / system: ThemeToggle, set_theme, init script
     widgets.rs       #   generic data-display widgets (Meter, Banner, …)
+    graph.rs         #   the graph: Dag, DagLegend, and the old Graph wrapper
+    graph_layout.rs  #   the graph data model and its pure layout (unit-tested)
     hlin.rs          #   `hlin` feature: Aurora as a Hlin design pack
     hlin.css         #     the chrome that module needs, embedded in it
   style/             #   framework-agnostic stylesheet, shipped with the crate
     tokens.css       #     Aurora tokens: light + dark colours, spacing, radii, type scale
     components.css   #     every component's static chrome
+    graph.css        #     the graph chrome (in AURORA_CSS; also GRAPH_CSS)
     fonts.css        #     IBM Plex @font-face
   PATTERNS.md        #   usage guide — when to reach for each component
 leptos-gallery/      # example app rendering every component/widget

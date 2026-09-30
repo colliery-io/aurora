@@ -58,6 +58,8 @@ widgets take state labels/colors/tooltips as data — apps supply their own voca
 | `BuildStatusBadge` | CI build state → pill. |
 | `NodeReadiness` | Trigger description + per-input freshness + summary. |
 | `InputTable` | Per-input state/last-event/rate/freshness/action (`Input` model). |
+| `Dag` · `DagLegend` | The Aurora graph: layout (ranked DAG, or fixed layers with lanes) and interaction (select, open, hover, keyboard, "+N"). The product gives `DagNode` / `DagEdge` / `DagLane`. |
+| `Graph` | The old graph API, a thin wrapper over `Dag`. |
 
 ### Pure logic (`tokens.rs`)
 Semantic palette (`token::*`), `status_color`, `pill_bg` / `fill_for` /
@@ -66,6 +68,6 @@ type and `THEME_INIT_SCRIPT`. Framework-agnostic Rust — the seam where typed A
 
 ## Built downstream (not shipped by the pack)
 App branding (e.g. a logo mark) and app-specific state vocab/colors are supplied
-by the consuming app as data. Heavier app surfaces — notably DAG/graph + node
-views (`@dagrejs/dagre` in React; note `rust-sugiyama`/`layout-rs` for a Rust
-port) — are built on these primitives downstream.
+by the consuming app as data. App panels around a graph (side lists, node
+detail views) are built downstream. The graph layout and its interaction are
+Aurora's (`graph_layout.rs`, a pure Sugiyama-style layout, and `Dag`).

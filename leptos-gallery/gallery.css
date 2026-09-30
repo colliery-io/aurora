@@ -105,3 +105,8 @@ html { scroll-behavior: smooth; }
   border-radius: var(--radius-panel);
   padding: 18px;
 }
+
+/* Graph demos: one card per graph, with space between them. */
+.gallery__graph { margin-bottom: 14px; }
+.gallery__readout { margin: 10px 0 0; }
+.gallery__readout b { color: var(--fg-bright); font-weight: 600; }
