@@ -19,8 +19,11 @@
 //!   `InputTable`, `StaleInputsBanner`, plus the `Input` model and
 //!   `format_ago`/`is_stale`/`freshness_pct` helpers. Apps supply their own state
 //!   labels/colors as data — no built-in vocab or branding.
-//! - **Graph** ([`graph`]) — generic graph/DAG drawing primitives: `GraphNode`,
-//!   `GraphEdge`, a dependency-free layered layout, and an SVG `Graph` component.
+//! - **Graph** ([`graph`], [`graph_layout`]) — the Aurora graph. The product
+//!   gives nodes, edges and lanes (`DagNode`, `DagEdge`, `DagLane`); Aurora
+//!   does the layout (a pure, tested function) and the interaction (select,
+//!   open, hover, keyboard) in the `Dag` component, with `DagLegend`. The old
+//!   `Graph` component stays as a thin wrapper.
 //! - **Tokens + pure logic** ([`tokens`]) — semantic palette as CSS variables
 //!   (`token::ICE` is `"var(--ice)"`), text/fill pairs, `status_color`,
 //!   `pill_bg`/`fill_for`/`fg_for`/`tint`, and `ApiError` error classification.
@@ -29,8 +32,9 @@
 //!   `set_theme`, `current_theme`, `use_theme`, and [`THEME_INIT_SCRIPT`] for a
 //!   first paint with no flash.
 //!
-//! Genuinely app-specific surfaces (e.g. cloacina's DAG/graph + node views) are
-//! built downstream from these primitives, not shipped here.
+//! Genuinely app-specific surfaces (side panels, node detail views, branding)
+//! are built downstream from these primitives. The graph layout and its
+//! interaction are Aurora's; a product gives only the data.
 //!
 //! ## Stylesheet
 //! The CSS ships inside this crate. Two ways to load it (see the workspace README
@@ -48,6 +52,8 @@
 //! ```
 
 // Pure logic (no renderer) — always available.
+// The graph layout: pure, no Leptos (always available).
+pub mod graph_layout;
 pub mod theme;
 pub mod tokens;
 pub use theme::*;
@@ -70,19 +76,23 @@ pub use widgets::*;
 // ---- Stylesheet (available with or without the `components` feature) ----
 
 /// The full Aurora stylesheet (IBM Plex `@font-face` + tokens + component
-/// chrome), concatenated at compile time.
+/// chrome + graph chrome), concatenated at compile time.
 pub const AURORA_CSS: &str = concat!(
     include_str!("../style/fonts.css"),
     "\n",
     include_str!("../style/tokens.css"),
     "\n",
     include_str!("../style/components.css"),
+    "\n",
+    include_str!("../style/graph.css"),
 );
 
 /// Just the design tokens (CSS custom properties + scales).
 pub const TOKENS_CSS: &str = include_str!("../style/tokens.css");
 /// Just the component chrome (depends on the token custom properties).
 pub const COMPONENTS_CSS: &str = include_str!("../style/components.css");
+/// Just the graph chrome (`Dag`, `DagLegend`, `Graph`; depends on the tokens).
+pub const GRAPH_CSS: &str = include_str!("../style/graph.css");
 /// Just the IBM Plex `@font-face` declarations.
 pub const FONTS_CSS: &str = include_str!("../style/fonts.css");
 
