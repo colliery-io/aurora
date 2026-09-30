@@ -194,7 +194,7 @@ pub fn StaleInputsBanner(inputs: Vec<Input>) -> impl IntoView {
         .filter(|i| is_stale(i.last_event_at))
         .collect();
     if stale.is_empty() {
-        return view! {}.into_any();
+        return ().into_any();
     }
     let n = stale.len();
     let names = stale

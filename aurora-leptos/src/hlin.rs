@@ -22,9 +22,7 @@
 //! keeps them consistent with everything around them without asking a general
 //! design system to grow a plotting library.
 
-use hlin_view::envelope::{
-    ColumnType, Envelope, Health, Options, Records, Scalar, Series, Status,
-};
+use hlin_view::envelope::{ColumnType, Envelope, Health, Options, Records, Scalar, Series, Status};
 use hlin_view::pack::Context;
 use hlin_view::{Cause, DesignPack, Intent, Kind};
 use leptos::prelude::*;
@@ -164,8 +162,11 @@ impl AuroraPack {
         // The same table the vocabulary draws, from the same helper: a person
         // switching this panel between kinds should see the same rows, not
         // Aurora's second opinion about them.
-        let headings: Vec<String> =
-            data.columns.iter().map(|column| column.label.clone()).collect();
+        let headings: Vec<String> = data
+            .columns
+            .iter()
+            .map(|column| column.label.clone())
+            .collect();
         let keys: Vec<(String, ColumnType)> = data
             .columns
             .iter()
@@ -176,7 +177,11 @@ impl AuroraPack {
             .iter()
             .map(|row| {
                 keys.iter()
-                    .map(|(key, kind)| row.get(key).map(|value| cell(value, *kind)).unwrap_or_default())
+                    .map(|(key, kind)| {
+                        row.get(key)
+                            .map(|value| cell(value, *kind))
+                            .unwrap_or_default()
+                    })
                     .collect()
             })
             .collect();
@@ -628,7 +633,11 @@ impl DesignPack for AuroraPack {
             .iter()
             .map(|row| {
                 keys.iter()
-                    .map(|(key, kind)| row.get(key).map(|value| cell(value, *kind)).unwrap_or_default())
+                    .map(|(key, kind)| {
+                        row.get(key)
+                            .map(|value| cell(value, *kind))
+                            .unwrap_or_default()
+                    })
                     .collect()
             })
             .collect();
@@ -1108,12 +1117,7 @@ fn tick_label(value: f64) -> String {
 fn clock_label(at_millis: i64) -> String {
     let seconds = at_millis.div_euclid(1000);
     let day = seconds.rem_euclid(86_400);
-    format!(
-        "{:02}:{:02}:{:02}",
-        day / 3600,
-        (day % 3600) / 60,
-        day % 60
-    )
+    format!("{:02}:{:02}:{:02}", day / 3600, (day % 3600) / 60, day % 60)
 }
 
 /// The same shape, small enough to sit in a row.

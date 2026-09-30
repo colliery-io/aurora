@@ -825,10 +825,7 @@ mod a11y_tests {
         // by `for=` in every browser. The prefix is there for that reason, not
         // for decoration.
         let id = field_id();
-        assert!(
-            id.starts_with("cl-field-"),
-            "unexpected id shape: {id}"
-        );
+        assert!(id.starts_with("cl-field-"), "unexpected id shape: {id}");
         assert!(
             id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
             "id must be a plain HTML identifier: {id}"
