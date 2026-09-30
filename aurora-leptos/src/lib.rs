@@ -1,9 +1,10 @@
-//! # Aurora Dark — Colliery's Leptos design system
+//! # Aurora — Colliery's Leptos design system
 //!
 //! Published on crates.io as **`colliery-io-aurora`** (org-prefixed to avoid
 //! claiming generic names); the library itself is imported as `aurora_leptos`.
 //!
-//! A general dark design system for Leptos, reused across Colliery projects. It
+//! A general design system for Leptos, with a light and a dark theme, reused
+//! across Colliery projects (formerly "Aurora Dark"). It
 //! is the **core that control-plane apps (cloacina included) are built from** —
 //! everything below is first-class core, not an optional add-on:
 //!
@@ -20,8 +21,13 @@
 //!   labels/colors as data — no built-in vocab or branding.
 //! - **Graph** ([`graph`]) — generic graph/DAG drawing primitives: `GraphNode`,
 //!   `GraphEdge`, a dependency-free layered layout, and an SVG `Graph` component.
-//! - **Tokens + pure logic** ([`tokens`]) — semantic palette, `status_color`,
-//!   `pill_bg`, and `ApiError` error classification. Framework-agnostic Rust.
+//! - **Tokens + pure logic** ([`tokens`]) — semantic palette as CSS variables
+//!   (`token::ICE` is `"var(--ice)"`), text/fill pairs, `status_color`,
+//!   `pill_bg`/`fill_for`/`fg_for`/`tint`, and `ApiError` error classification.
+//!   Framework-agnostic Rust.
+//! - **Theme** ([`theme`]) — light, dark or system: [`ThemeToggle`],
+//!   `set_theme`, `current_theme`, `use_theme`, and [`THEME_INIT_SCRIPT`] for a
+//!   first paint with no flash.
 //!
 //! Genuinely app-specific surfaces (e.g. cloacina's DAG/graph + node views) are
 //! built downstream from these primitives, not shipped here.
@@ -42,7 +48,9 @@
 //! ```
 
 // Pure logic (no renderer) — always available.
+pub mod theme;
 pub mod tokens;
+pub use theme::*;
 pub use tokens::*;
 
 // UI surface — requires the `components` feature (the default).
@@ -61,7 +69,7 @@ pub use widgets::*;
 
 // ---- Stylesheet (available with or without the `components` feature) ----
 
-/// The full Aurora Dark stylesheet (IBM Plex `@font-face` + tokens + component
+/// The full Aurora stylesheet (IBM Plex `@font-face` + tokens + component
 /// chrome), concatenated at compile time.
 pub const AURORA_CSS: &str = concat!(
     include_str!("../style/fonts.css"),
@@ -80,7 +88,7 @@ pub const FONTS_CSS: &str = include_str!("../style/fonts.css");
 
 /// Writes the full stylesheet to `dir/aurora.css` and returns the path. Leptos-free
 /// — call it from `build.rs` (cargo-leptos) or via the `aurora-css` bin in a trunk
-/// `pre_build` hook to ship Aurora Dark as a normal, render-blocking stylesheet.
+/// `pre_build` hook to ship Aurora as a normal, render-blocking stylesheet.
 /// Use `default-features = false` so leptos isn't built for the host.
 pub fn write_css(dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
     std::fs::create_dir_all(dir)?;

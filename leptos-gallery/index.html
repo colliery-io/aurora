@@ -3,8 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Aurora Dark · Leptos gallery</title>
-    <!-- Aurora Dark stylesheet, emitted by build.rs (aurora_leptos::write_css). -->
+    <title>Aurora · Leptos gallery</title>
+    <!-- Native controls follow the theme before the stylesheet loads. -->
+    <meta name="color-scheme" content="light dark" />
+    <!-- No flash: aurora_leptos::THEME_INIT_SCRIPT, verbatim. It sets
+         data-theme from localStorage before the first paint. -->
+    <script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"){var d=document.documentElement;d.setAttribute("data-theme",t);d.style.colorScheme=t;}}catch(e){}})();</script>
+    <!-- Aurora stylesheet, emitted by the pre_build hook (aurora_leptos::write_css). -->
     <link data-trunk rel="css" href="style/aurora.css" />
     <!-- gallery-only chrome (not part of the design system) -->
     <link data-trunk rel="css" href="gallery.css" />

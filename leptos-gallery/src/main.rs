@@ -1,9 +1,10 @@
-//! Aurora Dark — Leptos component gallery / example app.
+//! Aurora — Leptos component gallery / example app.
 //! Consumes the `aurora-leptos` crate (components + tokens + stylesheet) exactly
 //! as a downstream route port would.
 
 use aurora_leptos::components::*;
 use aurora_leptos::graph::*;
+use aurora_leptos::theme::{provide_theme, ThemeToggle};
 use aurora_leptos::tokens::{token, ApiError};
 use aurora_leptos::widgets::*;
 use leptos::prelude::*;
@@ -30,6 +31,8 @@ fn Section(
 
 /// Left-nav: (anchor id, label). Groups are rendered from the `group` marker.
 const NAV: &[(&str, &str)] = &[
+    ("§Theme", ""),
+    ("tokens", "Colour tokens"),
     ("§Components", ""),
     ("buttons", "Button"),
     ("layout", "Box · Group · Stack · Text"),
@@ -65,7 +68,7 @@ fn Nav() -> impl IntoView {
         .collect_view();
     view! {
         <nav class="gallery-nav">
-            <div class="gallery-nav__title">"Aurora Dark"</div>
+            <div class="gallery-nav__title">"Aurora"</div>
             {items}
         </nav>
     }
@@ -73,6 +76,8 @@ fn Nav() -> impl IntoView {
 
 #[component]
 fn App() -> impl IntoView {
+    // Theme state for the whole gallery; the toggle in the header uses it.
+    provide_theme();
     let modal_open = RwSignal::new(false);
     let name = RwSignal::new(String::from("nightly-ingest"));
     let bad_field = RwSignal::new(String::new());
@@ -189,6 +194,29 @@ fn App() -> impl IntoView {
         })
         .collect_view();
 
+    let hues = [
+        ("ice", token::ICE),
+        ("teal", token::TEAL),
+        ("violet", token::VIOLET),
+        ("gold", token::GOLD),
+        ("ok", token::OK),
+        ("bad", token::BAD),
+        ("skip", token::SKIP),
+        ("muted", token::MUTED),
+    ];
+    let swatches = hues
+        .iter()
+        .map(|(name, color)| {
+            view! {
+                <div class="gallery-swatch">
+                    <span class="gallery-swatch__chip" style=format!("background:{color};")></span>
+                    <Pill color=*color>{format!("--{name}-fg")}</Pill>
+                    <span class="cl-mono" style=format!("color:{color};font-size:12px;")>{format!("--{name}")}</span>
+                </div>
+            }
+        })
+        .collect_view();
+
     let chips = [
         ("All", 128),
         ("Running", 4),
@@ -216,18 +244,26 @@ fn App() -> impl IntoView {
             <Nav />
             <main class="gallery-main">
             <PageHeader
-                title="Aurora Dark"
+                title="Aurora"
                 sub="leptos · wasm — aurora-leptos component gallery"
                 right=Box::new(|| view! {
-                    <Group gap="xs">
+                    <Group gap="sm">
                         <StatusBadge status="running" />
                         <HealthPill label="live" color=token::OK tip="Connected and receiving data normally." />
+                        <ThemeToggle />
                     </Group>
                 }.into_any())
             />
             <p class="gallery__lead">
-                "The complete Aurora Dark design system, ported to Leptos 0.8 — every Mantine primitive in use plus all Aurora components, shipped as the aurora-leptos crate."
+                "The complete Aurora design system, ported to Leptos 0.8 — every Mantine primitive in use plus all Aurora components, shipped as the aurora-leptos crate. Light and dark themes; the toggle above chooses light, dark or the system setting."
             </p>
+
+            // ---- Theme: colour tokens ----
+            <Section id="tokens" title="Colour tokens" caption="each status hue: the hue (solid fill), --x-fg text on the --x-bg fill, and text on a panel">
+                <div class="gallery__card">
+                    <div class="gallery-swatches">{swatches}</div>
+                </div>
+            </Section>
 
             // ---- Buttons ----
             <Section id="buttons" title="Button" caption="variants: filled · light · default · subtle — sizes xs/sm/md — danger — disabled">

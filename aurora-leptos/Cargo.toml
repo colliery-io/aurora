@@ -5,7 +5,7 @@ name = "colliery-io-aurora"
 version = "0.3.1"
 edition = "2021"
 license = "Apache-2.0"
-description = "Aurora Dark — Colliery's general dark design system for Leptos: the core that control-plane apps are built from (components, tokens, stylesheet)."
+description = "Aurora — Colliery's design system for Leptos, with light and dark themes: the core that control-plane apps are built from (components, tokens, stylesheet)."
 repository = "https://github.com/colliery-io/aurora-dark"
 
 # Ship the stylesheet with the crate so build.rs can emit it (write_css) and the
@@ -23,7 +23,19 @@ name = "aurora_leptos"
 # for a tiny, leptos-free build that still exposes `write_css` + the CSS consts —
 # use that in [build-dependencies] to emit a normal stylesheet at build time.
 default = ["components"]
-components = ["dep:leptos", "dep:web-sys", "dep:js-sys"]
+components = [
+    "dep:leptos",
+    "dep:web-sys",
+    "dep:js-sys",
+    # Theme: set data-theme on <html>, store the choice, watch the OS setting.
+    "web-sys/Document",
+    "web-sys/Element",
+    "web-sys/HtmlElement",
+    "web-sys/CssStyleDeclaration",
+    "web-sys/Storage",
+    "web-sys/MediaQueryList",
+    "web-sys/EventTarget",
+]
 
 # Makes this crate a design pack for Hlin: a module implementing `DesignPack`,
 # so a Hlin front end can be drawn with Aurora. Off by default and additive —

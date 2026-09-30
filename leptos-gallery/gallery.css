@@ -85,6 +85,20 @@ html { scroll-behavior: smooth; }
   gap: 14px;
   margin-bottom: 14px;
 }
+/* Colour token swatches. */
+.gallery-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.gallery-swatch { display: flex; align-items: center; gap: 10px; }
+.gallery-swatch__chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex: none;
+}
+
 .gallery__card {
   background: var(--panel);
   border: 1px solid var(--border);
