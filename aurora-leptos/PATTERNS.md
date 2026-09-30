@@ -30,7 +30,7 @@ pieces** when two options look alike.
 5. **Renderer-agnostic.** The crate depends on `leptos` with no renderer feature;
    your binary selects `csr` (or `hydrate`/`ssr`).
 6. **Reactivity.** Inputs bind to `RwSignal`s (two-way); handlers are `Callback`s.
-   `Modal`/`Menu` open-state are `RwSignal<bool>`.
+   `Modal`/`Drawer`/`ConfirmDialog`/`Menu` open-state are `RwSignal<bool>`.
 
 ```rust
 use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::token};
@@ -46,8 +46,11 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | Stack things vertically | `Stack` | `gap`, `center` |
 | Equal-width grid | `SimpleGrid` | `cols=N` |
 | Proportional 12-col grid | `Grid` + `GridCol span=` | when columns differ in width |
-| App scaffold (nav + header + body) | `AppShell` | top-level page chrome |
-| Page title + subtitle + actions | `PageHeader` | `right=` slot for buttons |
+| App scaffold (nav + header + body) | `AppShell` + `SideNav` | fills the page; drawer below 768px |
+| Sidebar links, groups, counts | `SideNav` + `SideNavGroup` + `SideNavLink` | `active` closure sets `aria-current` |
+| Page title + subtitle + actions | `PageHeader` | `back_href`, `meta`, `actions` (or `right`) |
+| Switch between views of one thing | `Tabs` + `TabPanel` | signal tabs, or `href` route tabs |
+| A clickable card in a grid | `Card` | `href` or `on_click` |
 | A bordered content card | `Panel` | `title` + optional `caption` |
 | Body / caption / mono text | `Text` | `mono`, `dimmed`, `bright`, `bold`, `size` |
 | Inline code / a link | `Code` / `Anchor` | — |
@@ -58,7 +61,10 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | An on/off toggle | `Switch` | `checked: RwSignal<bool>` |
 | Copy-to-clipboard | `CopyButton` | `value` |
 | A hover explanation | `Tooltip` | wrap the trigger |
-| A confirming / focused overlay | `Modal` | `open: RwSignal<bool>` |
+| A focused task over the page | `Modal` | `size` sm/md/lg/xl, `footer` |
+| A detail view from the side | `Drawer` | same props as `Modal` |
+| Confirm a destroy / cascade | `ConfirmDialog` | `impacts`, `confirm_text`, `busy` |
+| Tell the person something happened | `use_toaster().success(…)` | mount one `ToastStack` |
 | A dropdown of actions | `Menu` + `MenuItem` | items close it on click |
 | A short status tag | `StatusBadge` (status string) · `Pill` (custom hue) · `HealthPill` (+tooltip) | see comparison below |
 | A small status dot | `Dot` | `color`, `glow` |
@@ -97,6 +103,17 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
   (flex); grids for tabular/cellular layouts that should wrap evenly.
 - **`Modal` vs `Menu`** — `Modal` for a focused task/confirmation that blocks the
   page; `Menu` for a small list of actions off a trigger button.
+- **`Modal` vs `Drawer` vs `ConfirmDialog`** — `Modal` for a form or a task.
+  `Drawer` for a detail view that keeps the list in sight. `ConfirmDialog` for
+  every action that deletes, archives or cascades: never delete on one click.
+- **`Tabs` vs `SegmentedControl`** — `Tabs` change the view (an underline tab
+  list, ARIA `tablist`). `SegmentedControl` picks a value for a filter or a
+  mode (a boxed control, `aria-pressed`).
+- **`Card` vs `Panel`** — `Panel` is a titled section of a page. `Card` is one
+  of many things in a grid; it can be a link or a button.
+- **Toast vs `Banner` vs `Alert`** — a toast is a short message that goes away
+  (saved, deleted, failed to send). A `Banner` or an `Alert` stays on the page
+  while the state is true.
 
 ---
 
@@ -107,7 +124,38 @@ Key props only — see rustdoc for the full signatures.
 ### Layout
 `Box` · `Group{justify,top,wrap,gap}` · `Stack{center,gap}` ·
 `SimpleGrid{cols}` · `Grid` + `GridCol{span}` · `Divider` ·
-`AppShell{header?, navbar, children}`.
+`Card{href,on_click,title,label,selected}`.
+
+### Frame
+`AppShell{header?, navbar?, brand?, contained, menu_label}` ·
+`SideNav{label, footer?}` · `SideNavGroup{label}` ·
+`SideNavLink{href, active, count, count_color, marker, icon?, on_click}` ·
+`PageHeader{title, sub, back_href, back_label, meta?, actions?, right?}` ·
+`Tabs{tabs:Vec<TabItem>, value, label}` + `TabPanel{value}`.
+
+```rust
+let path = use_location().pathname; // or your own route signal
+view! {
+    <AppShell
+        brand=Arc::new(|| view! { <Logo/> "Cloacina" }.into_any())
+        navbar=Box::new(move || view! {
+            <SideNav footer=Box::new(|| view! { <TenantSwitcher/> }.into_any())>
+                <SideNavLink href="/" active=move || path.get() == "/">"Overview"</SideNavLink>
+                <SideNavGroup label="Orchestration">
+                    <SideNavLink href="/workflows" count=3usize
+                        active=move || path.get().starts_with("/workflows")>"Workflows"</SideNavLink>
+                </SideNavGroup>
+            </SideNav>
+        }.into_any())
+    >
+        <Outlet/>
+    </AppShell>
+}
+```
+
+`AppShell` fills the page. With no `header`, the `brand` shows at the top of
+the sidebar; with a `header`, it shows in the header. Below 768px the sidebar
+is a drawer behind a menu button (Escape, the scrim or a link closes it).
 
 ### Typography
 `Text{size,dimmed,bright,bold,mono}` · `Code` · `Anchor{href}` ·
@@ -127,8 +175,13 @@ view! { <TextInput label="Name" value=name placeholder="e.g. nightly" /> }
 ```
 
 ### Overlays & feedback
-`Tooltip{label}` · `Modal{open:RwSignal<bool>,title}` · `Menu{label}` + `MenuItem{on_click}` ·
+`Tooltip{label}` · `Modal{open,title,size,footer?,close_on_scrim,locked,on_close}` ·
+`Drawer{…same}` · `ConfirmDialog{open,title,message,impacts,confirm_text,confirm_label,danger,busy,on_confirm,on_cancel}` ·
+`ToastStack{duration_ms}` + `provide_toaster()` / `use_toaster()` · `Menu{label}` + `MenuItem{on_click}` ·
 `Alert{title,color}` · `Loader`.
+
+Dialogs move focus in on open (to `data-autofocus`, else the first control),
+keep Tab inside, close on Escape, and give focus back to the opener.
 
 ```rust
 let open = RwSignal::new(false);
@@ -136,6 +189,21 @@ view! {
     <Button on_click=Callback::new(move |_| open.set(true))>"Open"</Button>
     <Modal open=open title="Confirm"> <Text>"…"</Text> </Modal>
 }
+
+// A destroy with a cascade and a name check. It stays open until you close it.
+view! {
+    <ConfirmDialog open=del title="Delete workflow?"
+        message="This deletes the workflow and its run history."
+        impacts=children_codes            // Signal<Vec<String>> or Vec<String>
+        confirm_text="nightly-ingest" confirm_label="Delete" busy=deleting
+        on_confirm=Callback::new(move |_| start_delete()) />
+}
+
+// Toasts: once at the root, then from anywhere.
+provide_toaster();                        // + <ToastStack/> in the root view
+let toaster = use_toaster();              // Copy: capture it for async code
+toaster.success("Workflow deployed");
+toaster.toast(ToastKind::Error, "The server did not answer");
 ```
 
 ### Status & async states

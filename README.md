@@ -30,6 +30,8 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
   src/
     lib.rs           #   public API: components, tokens, AURORA_CSS / <AuroraStyles/>
     components.rs    #   core components (primitives)
+    frame.rs         #   AppShell, SideNav, PageHeader, Modal, Drawer,
+                     #   ConfirmDialog, toasts, Tabs, Card
     tokens.rs        #   semantic tokens (CSS variables) + error classification
     theme.rs         #   light / dark / system: ThemeToggle, set_theme, init script
     widgets.rs       #   generic data-display widgets (Meter, Banner, …)

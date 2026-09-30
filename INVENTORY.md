@@ -18,7 +18,7 @@ CSS class (`components.css`) styled from the Aurora tokens.
 | `Text` | 15 | size + `dimmed`/`bright`/`bold`/`mono`. |
 | `Stack` | 12 | Vertical flex; `gap`/`center`. |
 | `Tooltip` | 9 | Pure-CSS hover; multiline + arrow. |
-| `Modal` | 9 | Reactive overlay on a bool signal. |
+| `Modal` | 9 | Dialog on a bool signal: sizes sm–xl, footer, focus trap, Escape. |
 | `TextInput` | 8 | label/placeholder/value/error. |
 | `Table` | 6 | `.cl-table` (+ `mono`). |
 | `Alert` | 5 | Tinted callout; backs `ErrorState`. |
@@ -30,7 +30,7 @@ CSS class (`components.css`) styled from the Aurora tokens.
 | `Textarea` | 2 | Multi-line field. |
 | `SegmentedControl` | 2 | Bound to a string signal. |
 | `SimpleGrid` | 2 | Equal-width grid. |
-| `AppShell` | 1 | Header + navbar + main scaffold. |
+| `AppShell` | 1 | Page scaffold: header, brand, sidebar (drawer below 768px), main. |
 | `Menu` | 1 | Dropdown + `MenuItem` (context-wired). |
 | `Code` | 1 | Inline monospace chip. |
 | `Loader` | 1 | CSS spinner. |
@@ -49,7 +49,12 @@ widgets take state labels/colors/tooltips as data — apps supply their own voca
 | `MONO` / `tokens::token` | Mono helper (`.cl-mono`) + palette as CSS variables (`var(--ice)`). |
 | `Pill` · `StatusBadge` · `Dot` | Status text token (`--x-fg`) on its fill token (`--x-bg`); status dot. |
 | `ThemeToggle` | Light / Dark / System choice, stored in the browser. |
-| `Panel` · `PageHeader` · `Chip` | Card surface; page title; filter chip. |
+| `Panel` · `PageHeader` · `Chip` | Card surface; page title (back link, meta, actions); filter chip. |
+| `SideNav` · `SideNavGroup` · `SideNavLink` | Sidebar nav: groups, active link (`aria-current`), counts, footer. |
+| `Drawer` · `ConfirmDialog` | Slide-over panel; confirmation with impacts, type-to-confirm, busy. |
+| `ToastStack` · `Toaster` | Toasts from any part of the app (`use_toaster()`). |
+| `Tabs` · `TabPanel` · `TabItem` | Underline tab list: signal or route tabs, arrow keys. |
+| `Card` | Panel that is a link or a button, with hover and focus states. |
 | `Loading` · `Empty` · `ErrorState` | Async-view states (error renders by classified kind). |
 | `Meter` | Freshness/progress bar. |
 | `Banner` · `StaleInputsBanner` | Tinted callout; stale-inputs convenience. |
