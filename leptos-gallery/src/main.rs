@@ -11,6 +11,7 @@ use leptos::prelude::*;
 
 mod frame_demo;
 use frame_demo::FrameSections;
+mod graph_demo;
 
 fn main() {
     leptos::mount::mount_to_body(App);
@@ -545,7 +546,16 @@ fn App() -> impl IntoView {
             </Section>
 
             // ---- Graph / DAG ----
-            <Section id="graph" title="Graph / DAG" caption="generic node + edge drawing primitives with a built-in layered layout">
+            <Section id="graph" title="Graph / DAG" caption="Dag: Aurora does the layout and the interaction; the product gives nodes, edges, lanes. Click selects, double click or Enter on the selected node opens, hover or focus highlights edges.">
+                <div class="gallery__card gallery__graph" id="graph-workflow">
+                    <div class="gallery__caption">"ranked DAG, left to right — ranks from the edges (a workflow)"</div>
+                    <graph_demo::WorkflowDemo />
+                </div>
+                <div class="gallery__card gallery__graph" id="graph-lanes">
+                    <div class="gallery__caption">"fixed layers with lanes — the product gives the layer and the lane (flight levels)"</div>
+                    <graph_demo::LanesDemo />
+                </div>
+                <div class="gallery__caption">"Graph — the old API, now a thin wrapper over Dag"</div>
                 <Group top=true wrap=true gap="sm">
                     <div class="gallery__card" style="overflow:auto;">
                         <div class="gallery__caption">"direction = TB (default)"</div>

@@ -111,3 +111,7 @@ html { scroll-behavior: smooth; }
   .gallery-nav { display: none; }
   .gallery-main { padding: 24px 16px 80px; }
 }
+/* Graph demos: one card per graph, with space between them. */
+.gallery__graph { margin-bottom: 14px; }
+.gallery__readout { margin: 10px 0 0; }
+.gallery__readout b { color: var(--fg-bright); font-weight: 600; }
