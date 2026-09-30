@@ -9,6 +9,8 @@ use aurora_leptos::tokens::{token, ApiError};
 use aurora_leptos::widgets::*;
 use leptos::prelude::*;
 
+mod data_demo;
+use data_demo::DataSections;
 mod frame_demo;
 use frame_demo::FrameSections;
 mod graph_demo;
@@ -57,6 +59,19 @@ const NAV: &[(&str, &str)] = &[
     ("toast", "Toast"),
     ("tabs", "Tabs"),
     ("card", "Card"),
+    ("§Data", ""),
+    ("stat", "StatTile · Sparkline"),
+    ("segbar", "SegmentedBar · Meter"),
+    ("detail", "DetailList · SectionLabel"),
+    ("logs", "CodeBlock · LogView"),
+    ("feed", "Feed · RelativeTime · Live"),
+    ("table2", "Table v2 · Pagination"),
+    ("§Inputs and actions", ""),
+    ("inputs2", "Input and button props"),
+    ("menu2", "Menu v2 · Tooltip"),
+    ("copy", "CopyButton · SecretReveal"),
+    ("auth", "CenterScreen · AuthCard"),
+    ("icons", "Icons"),
     ("§Widgets", ""),
     ("badges", "BuildStatus · HealthPill · Meter"),
     ("banners", "Banner"),
@@ -417,15 +432,17 @@ fn App() -> impl IntoView {
             // ---- Menu ----
             <Section id="menu-appshell" title="Menu" caption="dropdown menu off a trigger button">
                 <Menu label="Actions">
-                    <div class="cl-menu__label">"Run"</div>
+                    <MenuLabel>"Run"</MenuLabel>
                     <MenuItem>"Trigger now"</MenuItem>
                     <MenuItem>"Pause schedule"</MenuItem>
-                    <div class="cl-menu__divider"></div>
-                    <MenuItem>"Delete…"</MenuItem>
+                    <MenuDivider />
+                    <MenuItem danger=true>"Delete…"</MenuItem>
                 </Menu>
             </Section>
 
             <FrameSections />
+
+            <DataSections />
 
             // ---- Widgets: BuildStatusBadge · HealthPill · Meter ----
             <Section id="badges" title="BuildStatusBadge · HealthPill · Meter" caption="generic data-display widgets — the app supplies labels/colors">

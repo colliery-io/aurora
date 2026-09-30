@@ -115,3 +115,14 @@ html { scroll-behavior: smooth; }
 .gallery__graph { margin-bottom: 14px; }
 .gallery__readout { margin: 10px 0 0; }
 .gallery__readout b { color: var(--fg-bright); font-weight: 600; }
+
+/* Data sections (data_demo.rs). */
+.gallery-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.gallery-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; margin-bottom: 12px; }
+.gallery__label { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+.gallery-icons { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.gallery-icon { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); }
+@media (max-width: 860px) {
+  .gallery-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery-two { grid-template-columns: minmax(0, 1fr); }
+}
