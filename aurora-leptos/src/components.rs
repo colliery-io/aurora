@@ -1,4 +1,4 @@
-//! Aurora Dark components — core Leptos primitives.
+//! Aurora components — core Leptos primitives.
 //!
 //! Static styling comes from the shared CSS classes; only the component
 //! logic/markup differs. Leptos uses fine-grained signals + the `view!` macro,
@@ -7,7 +7,7 @@
 
 use leptos::prelude::*;
 
-use crate::tokens::{classify, pill_bg, ApiError};
+use crate::tokens::{classify, fg_for, fill_for, tint, ApiError};
 
 /// A unique `id` for one field instance, so a `<label for=…>` can point at its
 /// control.
@@ -264,19 +264,19 @@ pub fn Modal(
 }
 
 // ----------------------------------------------------------------------------
-// Aurora Dark: Pill / StatusBadge / Dot / Panel / PageHeader / Chip
+// Aurora: Pill / StatusBadge / Dot / Panel / PageHeader / Chip
 // ----------------------------------------------------------------------------
 
 #[component]
 pub fn Pill(#[prop(into)] color: String, children: Children) -> impl IntoView {
-    let style = format!("background:{};color:{};", pill_bg(&color), color);
+    let style = format!("background:{};color:{};", fill_for(&color), fg_for(&color));
     view! { <span class="cl-pill" style=style>{children()}</span> }
 }
 
 #[component]
 pub fn StatusBadge(#[prop(into)] status: String) -> impl IntoView {
     let color = crate::tokens::status_color(&status);
-    let style = format!("background:{};color:{};", pill_bg(color), color);
+    let style = format!("background:{};color:{};", fill_for(color), fg_for(color));
     view! { <span class="cl-status-badge" style=style>{status}</span> }
 }
 
@@ -288,7 +288,7 @@ pub fn Dot(
 ) -> impl IntoView {
     let mut style = format!("width:{size}px;height:{size}px;background:{color};");
     if glow {
-        style.push_str(&format!("box-shadow:0 0 0 3px {color}22;"));
+        style.push_str(&format!("box-shadow:0 0 0 3px {};", tint(&color, 13)));
     }
     view! { <span class="cl-dot" style=style></span> }
 }

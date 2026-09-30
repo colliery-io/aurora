@@ -1,4 +1,4 @@
-//! Aurora Dark as a [Hlin](https://github.com/colliery-io/hlin) design pack.
+//! Aurora as a [Hlin](https://github.com/colliery-io/hlin) design pack.
 //!
 //! Behind the `hlin` feature, off by default. With it off this crate has no
 //! idea Hlin exists; with it on, [`AuroraPack`] implements `DesignPack` and a
@@ -38,7 +38,7 @@ use crate::{Graph, GraphEdge, GraphNode, Meter};
 /// Aurora's own CSS unchanged, then the little that belongs to Hlin: the two
 /// charts drawn here rather than by a component, the aged treatment, and the
 /// mapping onto the custom properties Hlin's own chrome reads so the frame
-/// around the panels is dark too.
+/// around the panels follows the same theme.
 pub const HLIN_CSS: &str = concat!(
     include_str!("../style/fonts.css"),
     "\n",
@@ -65,7 +65,7 @@ thread_local! {
     static BRUSH_START: std::cell::Cell<Option<f64>> = const { std::cell::Cell::new(None) };
 }
 
-/// Aurora Dark, as a Hlin design pack.
+/// Aurora, as a Hlin design pack.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AuroraPack;
 
@@ -599,7 +599,7 @@ impl DesignPack for AuroraPack {
                                 <path
                                     d=path
                                     fill="none"
-                                    stroke=colour
+                                    style=format!("stroke:{colour};")
                                     stroke-width="1.5"
                                     vector-effect="non-scaling-stroke"
                                     stroke-linejoin="round"
@@ -1250,7 +1250,7 @@ fn chart(plotted: Plotted) -> AnyView {
                 <path
                     d=path
                     fill="none"
-                    stroke=colour
+                    style=format!("stroke:{colour};")
                     stroke-width="1.5"
                     stroke-linejoin="round"
                     stroke-linecap="round"

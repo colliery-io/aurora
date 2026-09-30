@@ -1,4 +1,4 @@
-//! Aurora Dark **widgets** — generic, higher-level data-display building blocks
+//! Aurora **widgets** — generic, higher-level data-display building blocks
 //! that control-plane UIs compose from the core primitives.
 //!
 //! The vocabulary is deliberately generic dataflow: a **node** processes when its
@@ -348,7 +348,7 @@ pub fn InputTable(
                         <div class="cl-input-table__error">
                             <span style=format!("color:{};", token::BAD)>"✕ error"</span>
                             " "
-                            <span style="color:#b97a7a;">{e}</span>
+                            <span style="color:var(--bad-muted);">{e}</span>
                         </div>
                     })}
                 </div>

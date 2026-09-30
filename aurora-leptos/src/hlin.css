@@ -2,7 +2,7 @@
  *
  * Two parts. The chart styling belongs to the two views this pack draws by
  * hand, because Aurora has no plotting primitive. And the mapping onto Hlin's
- * own chrome properties, so the frame around the panels is dark too. */
+ * own chrome properties, so the frame around the panels follows the theme too. */
 
 /* -- Hlin's chrome, answered with Aurora's tokens ------------------------ */
 
@@ -16,7 +16,7 @@
   --hlin-faint: var(--faint);
 
   --hlin-accent: var(--ice);
-  --hlin-on-accent: var(--bg);
+  --hlin-on-accent: var(--on-accent);
 
   --hlin-good: var(--ok);
   --hlin-warn: var(--gold);

@@ -264,7 +264,7 @@ fn App() -> impl IntoView {
             </Section>
 
             // ---- Pills / StatusBadge / Dot ----
-            <Section id="pills" title="Pill · StatusBadge · Dot" caption="status hue at full strength on a 1c-alpha tint — radius 10, Plex Mono">
+            <Section id="pills" title="Pill · StatusBadge · Dot" caption="status text token on its fill token (--x-fg on --x-bg) — radius 10, Plex Mono">
                 <Group wrap=true>
                     <StatusBadge status="running" />
                     <StatusBadge status="completed" />
@@ -317,7 +317,7 @@ fn App() -> impl IntoView {
             </Section>
 
             // ---- Chips ----
-            <Section id="chips" title="Chip (filter)" caption="active = ice fill + dark text; inactive = panel + border">
+            <Section id="chips" title="Chip (filter)" caption="active = ice fill + on-accent text; inactive = panel + border">
                 <Group gap="sm" wrap=true>{chip_views}</Group>
             </Section>
 
@@ -443,13 +443,14 @@ fn App() -> impl IntoView {
                             header=Box::new(|| view! {
                                 // app-owned brand mark (the pack ships no branding)
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M5 4 C5 12, 12 12, 12 19" stroke="#7fb2ff" stroke-width="1.6" stroke-linecap="round" />
-                                    <path d="M12 4 C12 12, 12 12, 12 19" stroke="#5fd0c5" stroke-width="1.6" stroke-linecap="round" />
-                                    <path d="M19 4 C19 12, 12 12, 12 19" stroke="#9d8cff" stroke-width="1.6" stroke-linecap="round" />
-                                    <circle cx="5" cy="4" r="1.8" fill="#7fb2ff" />
-                                    <circle cx="12" cy="4" r="1.8" fill="#5fd0c5" />
-                                    <circle cx="19" cy="4" r="1.8" fill="#9d8cff" />
-                                    <circle cx="12" cy="20" r="2" fill="#8fbcff" />
+                                    // Colours from the tokens, so the mark follows the theme.
+                                    <path d="M5 4 C5 12, 12 12, 12 19" style="stroke:var(--ice)" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M12 4 C12 12, 12 12, 12 19" style="stroke:var(--teal)" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M19 4 C19 12, 12 12, 12 19" style="stroke:var(--violet)" stroke-width="1.6" stroke-linecap="round" />
+                                    <circle cx="5" cy="4" r="1.8" style="fill:var(--ice)" />
+                                    <circle cx="12" cy="4" r="1.8" style="fill:var(--teal)" />
+                                    <circle cx="19" cy="4" r="1.8" style="fill:var(--violet)" />
+                                    <circle cx="12" cy="20" r="2" style="fill:var(--brand-stroke)" />
                                 </svg>
                                 <Text bright=true bold=true>"cloacina"</Text>
                             }.into_any())

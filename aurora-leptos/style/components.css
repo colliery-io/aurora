@@ -2,18 +2,22 @@
  *  Copyright 2025-2026 Colliery Software
  *  SPDX-License-Identifier: Apache-2.0
  *
- *  Aurora Dark component styles — framework-agnostic.
+ *  Aurora component styles — framework-agnostic.
  *
  *  Two layers, same as the React design system:
  *    1. Mantine primitives (Button, TextInput, Select, Table, Modal, Tooltip,
- *       Alert, layout) — Mantine isn't available in Rust/WASM, so its dark
- *       themed appearance is reproduced here from the Aurora tokens.
- *    2. Aurora Dark components (Pill, StatusBadge, Panel, Dot, PageHeader,
+ *       Alert, layout) — Mantine isn't available in Rust/WASM, so its
+ *       appearance is reproduced here from the Aurora tokens.
+ *    2. Aurora components (Pill, StatusBadge, Panel, Dot, PageHeader,
  *       Chip, Loading, Empty) — ported from the components' inline styles.
  *
  *  Data-driven colors (a pill's status hue, a dot's color) are NOT here: they
  *  are passed as inline `style` from the component. Only the static chrome
  *  lives in CSS.
+ *
+ *  Every colour, shadow and overlay here is a token from tokens.css, so the
+ *  light and the dark theme both work. Do not put a raw colour in this file:
+ *  tests/no_raw_colours.rs refuses it.
  */
 
 /* ============================================================
@@ -116,7 +120,7 @@
 /* variant: light (tinted accent) */
 .cl-btn--light {
   background: color-mix(in srgb, var(--ice) 14%, transparent);
-  color: var(--ice);
+  color: var(--ice-fg);
 }
 .cl-btn--light:hover { background: color-mix(in srgb, var(--ice) 22%, transparent); }
 /* variant: default (neutral outline) */
@@ -125,16 +129,16 @@
   border-color: var(--border-control);
   color: var(--fg);
 }
-.cl-btn--default:hover { background: #20262f; }
+.cl-btn--default:hover { background: var(--control-hover); }
 /* variant: subtle */
 .cl-btn--subtle {
   background: transparent;
-  color: var(--ice);
+  color: var(--ice-fg);
 }
 .cl-btn--subtle:hover { background: color-mix(in srgb, var(--ice) 10%, transparent); }
 /* color override: bad/danger */
-.cl-btn--bad.cl-btn--filled { background: var(--bad); color: #1a0d0d; }
-.cl-btn--bad.cl-btn--light  { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.cl-btn--bad.cl-btn--filled { background: var(--bad); color: var(--on-status); }
+.cl-btn--bad.cl-btn--light  { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad-fg); }
 /* variant: alert — tinted to the surrounding alert's --alert-color (no blue clash) */
 .cl-btn--alert {
   background: color-mix(in srgb, var(--alert-color, var(--bad)) 16%, transparent);
@@ -156,7 +160,7 @@
   color: var(--fg-2);
   cursor: pointer;
 }
-.cl-action-icon:hover { background: color-mix(in srgb, var(--ice) 10%, transparent); color: var(--ice); }
+.cl-action-icon:hover { background: color-mix(in srgb, var(--ice) 10%, transparent); color: var(--ice-fg); }
 
 /* ----- Inputs: TextInput / Select / Textarea / PasswordInput / NumberInput ----- */
 .cl-field { display: flex; flex-direction: column; gap: 5px; }
@@ -174,7 +178,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0 12px;
-  background: var(--inset);
+  background: var(--field);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
   color: var(--fg);
@@ -195,15 +199,21 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   letter-spacing: 0.18em;
 }
 
-/* Select — native <select> styled to match, with a chevron. */
+/* Select — native <select> styled to match, with a chevron.
+   The chevron is two thin diagonal strokes drawn with gradients in
+   var(--muted), so it follows the theme. (A data-URI SVG cannot read a CSS
+   variable.) It works on raw `cl-select` markup too, with no wrapper. */
 .cl-select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 32px;
   cursor: pointer;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b95a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-image:
+    linear-gradient(45deg, transparent calc(50% - 1px), var(--muted) calc(50% - 1px), var(--muted) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(135deg, transparent calc(50% - 0.5px), var(--muted) calc(50% - 0.5px), var(--muted) calc(50% + 1px), transparent calc(50% + 1px));
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 17px center, right 12px center;
   background-repeat: no-repeat;
-  background-position: right 10px center;
 }
 .cl-select option { background: var(--panel); color: var(--fg); }
 
@@ -285,9 +295,9 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: #05070a;
-  border: 1px solid var(--border);
-  color: var(--fg);
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  color: var(--tooltip-fg);
   font-size: var(--fs-xs);
   line-height: 1.45;
   padding: 6px 9px;
@@ -299,7 +309,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   opacity: 0;
   transition: opacity 90ms ease;
   z-index: 50;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-sm);
 }
 .cl-tooltip__label::after {
   content: "";
@@ -308,7 +318,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: var(--border);
+  border-top-color: var(--tooltip-border);
 }
 .cl-tooltip:hover .cl-tooltip__label { opacity: 1; }
 
@@ -316,7 +326,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 .cl-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 7, 10, 0.65);
+  background: var(--scrim);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-start;
@@ -329,7 +339,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   width: min(520px, calc(100vw - 32px));
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-lg);
 }
 .cl-modal__header {
   display: flex;
@@ -362,7 +372,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 .cl-divider { height: 1px; background: var(--border-soft); border: none; margin: 0; }
 
 /* ============================================================
-   LAYER 2 — Aurora Dark components
+   LAYER 2 — Aurora components
    ============================================================ */
 
 /* ----- Pill / StatusBadge -----
@@ -501,7 +511,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 }
 .cl-input-wrap__adorn:hover { color: var(--fg); }
 
-/* Number input — hide the native spinners for a consistent dark look */
+/* Number input — hide the native spinners for a consistent look */
 .cl-input[type="number"]::-webkit-outer-spin-button,
 .cl-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .cl-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
@@ -521,7 +531,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 }
 .cl-number__step:first-child { border-radius: 0 var(--radius-md) 0 0; border-bottom: none; }
 .cl-number__step:last-child { border-radius: 0 0 var(--radius-md) 0; }
-.cl-number__step:hover { background: #20262f; color: var(--fg); }
+.cl-number__step:hover { background: var(--control-hover); color: var(--fg); }
 
 /* Menu (dropdown) */
 .cl-menu { position: relative; display: inline-block; }
@@ -534,7 +544,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 4px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-md);
   z-index: 60;
 }
 .cl-menu__item {
@@ -588,7 +598,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
-  color: #fff;
+  color: var(--on-status);
   font-size: 11px;
   font-weight: 600;
   line-height: 20px;
@@ -621,7 +631,7 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
 .cl-input-table__th--right { text-align: right; }
 .cl-input-table__row { border-top: 1px solid var(--border-fainter); padding: 8px 0; }
 .cl-input-table__name-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.cl-input-table__name { font-family: var(--font-mono); font-size: 12.5px; color: #dce2e9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-input-table__name { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cl-input-table__state { font-size: 12px; }
 .cl-input-table__cell-mono { font-family: var(--font-mono); font-size: 11.5px; }
 .cl-input-table__action { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 7px; cursor: pointer; border: 1px solid var(--border-control); background: var(--panel); color: var(--ice); justify-self: end; }

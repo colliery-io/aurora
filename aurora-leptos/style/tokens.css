@@ -2,60 +2,131 @@
  *  Copyright 2025-2026 Colliery Software
  *  SPDX-License-Identifier: Apache-2.0
  *
- *  Aurora Dark design tokens — framework-agnostic.
+ *  Aurora design tokens — framework-agnostic.
  *
- *  This is the single source of truth for the Aurora Dark visual identity,
- *  ported verbatim from the React design system's `src/theme.css` :root block
- *  and augmented with the spacing / radius / type-scale tokens that were
- *  previously implicit in Mantine's theme + the components' inline styles.
+ *  This file is the single source of truth for the Aurora colours. It is the
+ *  only file in the crate that may hold a raw colour value (hex, rgb(), ...).
+ *  A test (tests/no_raw_colours.rs) refuses raw colours anywhere else.
  *
- *  Plain CSS custom properties — no framework coupling. Consumers either
- *  `<link>` this file or inject it via `AuroraStyles` / the `AURORA_CSS` const.
+ *  THEMES
+ *  Each colour token holds its light value and its dark value in one
+ *  declaration: `--x: light-dark(<light>, <dark>)`. The browser picks the value
+ *  from the `color-scheme` of the element:
+ *
+ *    <html>                      color-scheme: light dark  -> follows the OS
+ *                                (prefers-color-scheme), live
+ *    <html data-theme="light">   color-scheme: light       -> light, forced
+ *    <html data-theme="dark">    color-scheme: dark        -> dark, forced
+ *
+ *  `color-scheme` also makes native controls (scrollbars, select popups, date
+ *  pickers) follow the theme. Set `data-theme` with `set_theme()` or the
+ *  `ThemeToggle` component, and put `THEME_INIT_SCRIPT` in the <head> so the
+ *  first paint has the right theme.
+ *
+ *  STATUS PAIRS
+ *  Each status hue has three tokens:
+ *    --x      the hue. Solid fills (dots, meters, count badges, borders) and
+ *             text on a page or panel surface.
+ *    --x-fg   text on the --x-bg fill (pills, badges). Also safe on surfaces.
+ *    --x-bg   the tinted fill behind --x-fg.
+ *  x = ice, teal, violet, gold, ok, bad, skip, muted.
+ *  Text on a solid --x fill uses --on-status.
+ *
+ *  Consumers either `<link>` this file or inject it via `AuroraStyles` / the
+ *  `AURORA_CSS` const.
  */
 
+/* ----- Theme selection ----- */
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
 :root {
-  /* ----- Surfaces ----- */
-  --bg: #0e1116;
-  --sidebar: #12161c;
-  --panel: #161a21;
-  --panel-2: #13171e;
-  --inset: #0a0c10;
-  --control: #1b2129;
-  --border: #232a34;
-  --border-soft: #1d232c;
-  --border-fainter: #15191f;
-  --border-control: #2a3340;
+  /* ----- Surfaces (light, dark) ----- */
+  --bg: light-dark(#f3f5f8, #0e1116);
+  --sidebar: light-dark(#eceff4, #12161c);
+  --panel: light-dark(#ffffff, #161a21);
+  --panel-2: light-dark(#f7f8fa, #13171e);
+  --inset: light-dark(#eceff4, #0a0c10);
+  /* Input background (text inputs, selects, textareas). */
+  --field: light-dark(#ffffff, #0a0c10);
+  --control: light-dark(#ffffff, #1b2129);
+  --control-hover: light-dark(#eaeef4, #20262f);
+  --border: light-dark(#dce1e8, #232a34);
+  --border-soft: light-dark(#e5e9ee, #1d232c);
+  --border-fainter: light-dark(#edf0f3, #15191f);
+  /* The edge of a control (input, select, switch). Meets 3:1 on the surfaces. */
+  --border-control: light-dark(#7c8695, #5d6776);
 
   /* ----- Text ----- */
-  --fg: #e6e9ee;
-  --fg-bright: #f1f4f8;
-  --fg-2: #c3cbd5;
-  --muted: #8b95a3;
-  --faint: #5b6573;
-  --fainter: #4a525e;
+  --fg: light-dark(#18202b, #e6e9ee);
+  --fg-bright: light-dark(#0b1119, #f1f4f8);
+  --fg-2: light-dark(#354052, #c3cbd5);
+  --fg-strong: light-dark(#1d2531, #dce2e9);
+  --muted: light-dark(#525d6e, #8b95a3);
+  --faint: light-dark(#5e6979, #818b9b);
+  /* Large text, disabled text and decoration only (3:1, not 4.5:1). */
+  --fainter: light-dark(#7e8796, #636c79);
 
-  /* ----- Accents & semantic status ----- */
-  --ice: #7fb2ff;
-  --edge: #283039;
-  --brand-stroke: #8fbcff;
-  --teal: #5fd0c5;
-  --violet: #9d8cff;
-  --gold: #d8a657;
-  --ok: #4bd07f;
-  --bad: #f06464;
-  --skip: #cf83a4;
+  /* ----- Accents & semantic status: the hue ----- */
+  --ice: light-dark(#1f60cc, #7fb2ff);
+  --teal: light-dark(#0a7a70, #5fd0c5);
+  --violet: light-dark(#6344d4, #9d8cff);
+  --gold: light-dark(#8a5800, #d8a657);
+  --ok: light-dark(#15793b, #4bd07f);
+  --bad: light-dark(#c22a2a, #f06464);
+  --skip: light-dark(#a1386c, #cf83a4);
+  /* --muted (above) is also the "idle / pending" status hue. */
 
-  /* Ice accent scale (mirrors theme.ts `ice` tuple) — for hover/active. */
-  --ice-3: #93bcff;
-  --ice-5: #669ff2;
-  --ice-7: #4f7fd0;
+  /* ----- Status text (on the -bg fill) ----- */
+  --ice-fg: light-dark(#174ca6, #7fb2ff);
+  --teal-fg: light-dark(#086b62, #5fd0c5);
+  --violet-fg: light-dark(#5836c4, #9d8cff);
+  --gold-fg: light-dark(#7a4d00, #d8a657);
+  --ok-fg: light-dark(#126a33, #4bd07f);
+  --bad-fg: light-dark(#a51f1f, #f06464);
+  --skip-fg: light-dark(#8f2f5f, #cf83a4);
+  --muted-fg: light-dark(#4a5465, #8b95a3);
 
-  /* Dark text-on-accent (filled buttons, active chips). */
-  --on-accent: #0b0d10;
+  /* ----- Status fill (behind the -fg text) ----- */
+  --ice-bg: color-mix(in srgb, var(--ice) 11%, transparent);
+  --teal-bg: color-mix(in srgb, var(--teal) 11%, transparent);
+  --violet-bg: color-mix(in srgb, var(--violet) 11%, transparent);
+  --gold-bg: color-mix(in srgb, var(--gold) 11%, transparent);
+  --ok-bg: color-mix(in srgb, var(--ok) 11%, transparent);
+  --bad-bg: color-mix(in srgb, var(--bad) 11%, transparent);
+  --skip-bg: color-mix(in srgb, var(--skip) 11%, transparent);
+  --muted-bg: color-mix(in srgb, var(--muted) 11%, transparent);
 
-  /* ----- Gradients ----- */
-  --aurora-2: linear-gradient(90deg, #5fd0c5, #7fb2ff);
-  --aurora-3: linear-gradient(90deg, #5fd0c5, #7fb2ff, #9d8cff);
+  /* Text on a solid status or accent fill (count badges, filled buttons). */
+  --on-status: light-dark(#ffffff, #0b0d10);
+  --on-accent: light-dark(#ffffff, #0b0d10);
+  /* Secondary error text (the detail line under an error). */
+  --bad-muted: light-dark(#8e3b3b, #b97a7a);
+
+  /* ----- Graph and brand ----- */
+  /* Graph edges. Meets 3:1 on the panels. */
+  --edge: light-dark(#7e8795, #626b79);
+  --brand-stroke: light-dark(#3a76dc, #8fbcff);
+
+  /* Ice accent scale — for hover / active on ice fills. */
+  --ice-3: light-dark(#3a78de, #93bcff);
+  --ice-5: light-dark(#1a53b3, #669ff2);
+  --ice-7: light-dark(#154494, #4f7fd0);
+
+  /* ----- Overlays, shadows, scrollbars ----- */
+  --tooltip-bg: light-dark(#1b2330, #05070a);
+  --tooltip-fg: light-dark(#f1f4f8, #e6e9ee);
+  --tooltip-border: light-dark(#1b2330, #232a34);
+  --scrim: light-dark(rgba(16, 24, 38, 0.32), rgba(5, 7, 10, 0.65));
+  --shadow-sm: 0 4px 16px light-dark(rgba(16, 24, 38, 0.14), rgba(0, 0, 0, 0.5));
+  --shadow-md: 0 12px 32px light-dark(rgba(16, 24, 38, 0.14), rgba(0, 0, 0, 0.5));
+  --shadow-lg: 0 20px 60px light-dark(rgba(16, 24, 38, 0.2), rgba(0, 0, 0, 0.6));
+  --scrollbar: light-dark(#c3cad4, #283039);
+
+  /* ----- Gradients (follow the theme through the hue tokens) ----- */
+  --aurora-2: linear-gradient(90deg, var(--teal), var(--ice));
+  --aurora-3: linear-gradient(90deg, var(--teal), var(--ice), var(--violet));
 
   /* ----- Radii (Mantine scale; defaultRadius = md) ----- */
   --radius-xs: 2px;
@@ -117,14 +188,14 @@ body {
 /* Scrollbars: 9px, faint thumb, transparent track. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #283039 transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 *::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #283039;
+  background: var(--scrollbar);
   border-radius: 9px;
 }
 *::-webkit-scrollbar-track {
