@@ -1,0 +1,122 @@
+/*
+ *  Copyright 2025-2026 Colliery Software
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Aurora graph (`Dag`, `DagLegend`, and `Graph`, which wraps `Dag`).
+ *
+ *  Every colour is a token. A hue class (`cl-dag__hue--ok`) sets `--hue` and
+ *  `--hue-fg` for an edge, an arrowhead or a mark. A status class on a node
+ *  (`status-ok`) sets `--node-hue`, `--node-fg` and `--node-bg` from the
+ *  `--ok`, `--ok-fg` and `--ok-bg` tokens. The arrowheads are one marker per
+ *  edge style, with a hue class, so they follow the theme.
+ */
+
+/* ----- Hues ----- */
+.cl-dag__hue--neutral { --hue: var(--edge); --hue-fg: var(--muted); }
+.cl-dag__hue--ice { --hue: var(--ice); --hue-fg: var(--ice-fg); }
+.cl-dag__hue--teal { --hue: var(--teal); --hue-fg: var(--teal-fg); }
+.cl-dag__hue--violet { --hue: var(--violet); --hue-fg: var(--violet-fg); }
+.cl-dag__hue--gold { --hue: var(--gold); --hue-fg: var(--gold-fg); }
+.cl-dag__hue--ok { --hue: var(--ok); --hue-fg: var(--ok-fg); }
+.cl-dag__hue--bad { --hue: var(--bad); --hue-fg: var(--bad-fg); }
+.cl-dag__hue--skip { --hue: var(--skip); --hue-fg: var(--skip-fg); }
+.cl-dag__hue--muted { --hue: var(--muted); --hue-fg: var(--muted-fg); }
+
+/* ----- Frame ----- */
+.cl-dag-wrap { max-width: 100%; }
+.cl-dag-wrap--scroll { overflow: auto; }
+.cl-dag { display: block; max-width: 100%; height: auto; font-family: var(--font-sans); }
+.cl-dag-wrap--scroll .cl-dag { max-width: none; }
+
+.cl-dag__header {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ----- Lanes (containment) ----- */
+.cl-dag__lane { fill: var(--panel-2); stroke: var(--border); }
+.cl-dag__lane-label { fill: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+
+/* ----- Edges ----- */
+.cl-dag__edge {
+  fill: none;
+  stroke: var(--hue, var(--edge));
+  stroke-width: 1.5;
+  transition: opacity 0.12s, stroke-width 0.12s;
+}
+.cl-dag__edge--dashed { stroke-dasharray: 5 4; }
+.cl-dag__edge--hot { stroke-width: 2.75; }
+.cl-dag__arrowhead { fill: var(--hue, var(--edge)); stroke: none; }
+
+/* ----- Nodes ----- */
+.cl-dag__node {
+  --node-hue: var(--border-control);
+  --node-fg: var(--muted);
+  --node-bg: transparent;
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.12s;
+}
+.cl-dag__node.status-ice { --node-hue: var(--ice); --node-fg: var(--ice-fg); --node-bg: var(--ice-bg); }
+.cl-dag__node.status-teal { --node-hue: var(--teal); --node-fg: var(--teal-fg); --node-bg: var(--teal-bg); }
+.cl-dag__node.status-violet { --node-hue: var(--violet); --node-fg: var(--violet-fg); --node-bg: var(--violet-bg); }
+.cl-dag__node.status-gold { --node-hue: var(--gold); --node-fg: var(--gold-fg); --node-bg: var(--gold-bg); }
+.cl-dag__node.status-ok { --node-hue: var(--ok); --node-fg: var(--ok-fg); --node-bg: var(--ok-bg); }
+.cl-dag__node.status-bad { --node-hue: var(--bad); --node-fg: var(--bad-fg); --node-bg: var(--bad-bg); }
+.cl-dag__node.status-skip { --node-hue: var(--skip); --node-fg: var(--skip-fg); --node-bg: var(--skip-bg); }
+.cl-dag__node.status-muted { --node-hue: var(--muted); --node-fg: var(--muted-fg); --node-bg: var(--muted-bg); }
+
+.cl-dag__box { fill: var(--panel); stroke: var(--node-hue); stroke-width: 1.5; transition: stroke-width 0.12s; }
+.cl-dag__tint { fill: var(--node-bg); pointer-events: none; }
+.cl-dag__ring { fill: none; stroke: none; stroke-width: 2; pointer-events: none; }
+
+.cl-dag__node--hot .cl-dag__box { stroke-width: 2.5; }
+.cl-dag__node--current .cl-dag__box { stroke-width: 3; }
+.cl-dag__node:focus-visible .cl-dag__ring { stroke: var(--fg-2); stroke-dasharray: 4 3; }
+.cl-dag__node--selected .cl-dag__ring { stroke: var(--ice); stroke-dasharray: none; stroke-width: 2.5; }
+.cl-dag__node--selected:focus-visible .cl-dag__ring { stroke-width: 3.5; }
+
+/* Archived: drawn, so the paths through it stay, but it reads as put away. */
+.cl-dag__node--archived .cl-dag__box { fill: var(--inset); stroke-dasharray: 5 3; }
+.cl-dag__node--archived .cl-dag__tint { fill: transparent; }
+.cl-dag__node--archived .cl-dag__label { fill: var(--muted); }
+
+.cl-dag__label,
+.cl-dag__sublabel,
+.cl-dag__detail,
+.cl-dag__mark { pointer-events: none; }
+.cl-dag__label { fill: var(--fg); font-size: 12.5px; font-weight: 500; }
+.cl-dag__sublabel { fill: var(--muted); font-family: var(--font-mono); font-size: 10px; }
+.cl-dag__detail { fill: var(--node-fg); font-size: 10.5px; }
+.cl-dag__mark { fill: var(--hue-fg, var(--muted)); font-size: 10px; font-weight: 600; text-anchor: end; }
+
+/* ----- "+N" badge ----- */
+.cl-dag__more { cursor: pointer; outline: none; }
+.cl-dag__more circle { fill: var(--panel-2); stroke: var(--border-control); }
+.cl-dag__more text { fill: var(--fg-bright); font-size: 10px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+.cl-dag__more:hover circle,
+.cl-dag__more:focus-visible circle { stroke: var(--ice); stroke-width: 2; }
+
+/* ----- Hover / keyboard focus: the node, its edges, its neighbours ----- */
+.cl-dag--hovering .cl-dag__edge:not(.cl-dag__edge--hot) { opacity: 0.18; }
+.cl-dag--hovering .cl-dag__node:not(.cl-dag__node--hot):not(.cl-dag__node--near) { opacity: 0.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-dag .cl-pulse { animation: none; }
+  .cl-dag__edge, .cl-dag__node, .cl-dag__box { transition: none; }
+}
+
+/* ----- Legend ----- */
+.cl-dag-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: var(--space-xs);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.cl-dag-legend__item { display: inline-flex; align-items: center; gap: 6px; }
+.cl-dag-legend__sample { flex: none; }

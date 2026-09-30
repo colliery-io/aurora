@@ -1,27 +1,584 @@
-//! Generic graph / DAG drawing primitives.
+//! The Aurora graph: layout and interaction owned by Aurora, data from the
+//! product.
 //!
-//! A node + edge model, a dependency-free **layered layout** (longest-path
-//! layering — a Sugiyama-lite that looks good for typical DAGs), and an SVG
-//! [`Graph`] component that renders Aurora-styled nodes and arrowed edges. For
-//! large/complex graphs where crossing-minimisation matters, compute positions
-//! with a dedicated layout crate (`layout-rs`/`rust-sugiyama`) and feed them in.
-//!
-//! The drawing is generic; apps supply node labels, accent colors, and which
-//! edges are "active" (animated). Direction is top-to-bottom (`"TB"`, default)
-//! or left-to-right (`"LR"`).
+//! - [`Dag`] draws a layered graph from [`DagNode`]s, [`DagEdge`]s and
+//!   optional [`DagLane`]s. The layout is [`graph_layout::layout`], a pure
+//!   function. It supports a ranked DAG (ranks from the edges) and fixed
+//!   layers with lane bands (containment).
+//! - Interaction: click selects (`on_select`), double click or Enter on the
+//!   selected node opens (`on_open`). Hover or keyboard focus highlights the
+//!   edges of a node and dims the rest. Nodes are in the tab order, by layer.
+//! - The status of a node is a class (`status-ok`, ...) that maps to the
+//!   `--x` / `--x-fg` / `--x-bg` tokens. Edge styles are named by the product;
+//!   their arrowheads use the same tokens, so both themes work.
+//! - [`DagLegend`] shows the edge styles.
+//! - [`Graph`] is the old API (`GraphNode`, `GraphEdge`). It stays, as a thin
+//!   wrapper over [`Dag`].
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use leptos::prelude::*;
 
+use crate::graph_layout;
+pub use crate::graph_layout::{
+    default_edge_styles, Align, DagEdge, DagLane, DagNode, Direction, EdgeStyle, Hue,
+    LayoutOptions, NodeMark, DEFAULT_STYLE,
+};
 use crate::tokens::token;
 
-/// A graph node. Use the builder methods for ergonomics.
+/// A number for the ids of the arrowhead markers, unique on the page.
+static NEXT_GRAPH: AtomicUsize = AtomicUsize::new(0);
+
+/// Line height of the text in a node.
+const LINE: f64 = 14.0;
+/// Inner padding of a node.
+const PAD: f64 = 10.0;
+
+/// `text` cut to fit `width` pixels at `char_w` pixels a character, with an
+/// ellipsis. SVG text does not wrap.
+fn clip(text: &str, width: f64, char_w: f64) -> String {
+    let max = (width / char_w).floor().max(1.0) as usize;
+    if text.chars().count() <= max {
+        text.to_string()
+    } else {
+        let cut: String = text.chars().take(max.saturating_sub(1)).collect();
+        format!("{cut}…")
+    }
+}
+
+/// The style of each name, with the built-in styles under the product's.
+fn style_table(styles: Option<Vec<EdgeStyle>>) -> Vec<EdgeStyle> {
+    let mut table = styles.unwrap_or_default();
+    for builtin in default_edge_styles() {
+        if !table.iter().any(|s| s.name == builtin.name) {
+            table.push(builtin);
+        }
+    }
+    table
+}
+
+/// The styles that `edges` use, in the order of `table`. An unknown style
+/// name gets a neutral style labelled with the name.
+fn used_styles(table: &[EdgeStyle], edges: &[DagEdge]) -> Vec<EdgeStyle> {
+    let names: HashSet<&str> = edges.iter().map(|e| e.style.as_str()).collect();
+    let mut used: Vec<EdgeStyle> = table
+        .iter()
+        .filter(|s| names.contains(s.name.as_str()))
+        .cloned()
+        .collect();
+    let mut unknown: Vec<&str> = names
+        .into_iter()
+        .filter(|n| !table.iter().any(|s| s.name == *n))
+        .collect();
+    unknown.sort_unstable();
+    for name in unknown {
+        used.push(EdgeStyle::new(name, name, Hue::Neutral));
+    }
+    used
+}
+
+fn edge_classes(style: &EdgeStyle) -> String {
+    let mut c = format!("cl-dag__edge cl-dag__hue--{}", style.hue.name());
+    if style.dashed {
+        c.push_str(" cl-dag__edge--dashed");
+    }
+    if style.animated {
+        c.push_str(" cl-pulse");
+    }
+    c
+}
+
+/// A layered graph. Aurora does the layout and the interaction; the product
+/// gives the data.
+///
+/// ```ignore
+/// let nodes = vec![
+///     DagNode::new("fetch", "fetch").status(Hue::Ok),
+///     DagNode::new("load", "load").status(Hue::Ice),
+/// ];
+/// let edges = vec![DagEdge::new("fetch", "load").style("ok")];
+/// let styles = vec![EdgeStyle::new("ok", "Succeeded", Hue::Ok)];
+/// view! {
+///     <Dag nodes edges styles legend=true
+///          on_select=Callback::new(move |id: String| selected.set(Some(id))) />
+/// }
+/// ```
+#[component]
+pub fn Dag(
+    nodes: Vec<DagNode>,
+    edges: Vec<DagEdge>,
+    /// Lane labels and anchors. A node's `lane` works without one.
+    #[prop(optional)]
+    lanes: Vec<DagLane>,
+    /// Layer headers (column labels), in layer order.
+    #[prop(optional)]
+    layers: Vec<String>,
+    /// The edge styles. The built-in `default` and `active` are added when
+    /// not named here.
+    #[prop(optional)]
+    styles: Option<Vec<EdgeStyle>>,
+    /// Sizes and gaps. `direction`, `align`, `node_w` and `node_h` override it.
+    #[prop(optional)]
+    options: Option<LayoutOptions>,
+    #[prop(optional)] direction: Option<Direction>,
+    #[prop(optional)] align: Option<Align>,
+    #[prop(optional)] node_w: Option<f64>,
+    #[prop(optional)] node_h: Option<f64>,
+    /// The selected node id, when the product holds the selection. Without
+    /// it, the graph holds the selection itself.
+    #[prop(optional, into)]
+    selected: Option<Signal<Option<String>>>,
+    /// Click, Space, or Enter on a node that is not selected.
+    #[prop(optional)]
+    on_select: Option<Callback<String>>,
+    /// Double click, or Enter on the selected node.
+    #[prop(optional)]
+    on_open: Option<Callback<String>>,
+    /// Click or Enter on the "+N" badge of a node.
+    #[prop(optional)]
+    on_more: Option<Callback<String>>,
+    /// Show a legend of the edge styles that the graph uses.
+    #[prop(optional)]
+    legend: bool,
+    /// The accessible name of the graph.
+    #[prop(optional, into)]
+    label: Option<String>,
+    /// `true` (default): shrink to the width of the container. `false`:
+    /// natural size, with scroll bars.
+    #[prop(default = true)]
+    fit: bool,
+) -> impl IntoView {
+    let mut opts = options.unwrap_or_default();
+    if let Some(d) = direction {
+        opts.direction = d;
+    }
+    if let Some(a) = align {
+        opts.align = a;
+    }
+    if let Some(w) = node_w {
+        opts.node_w = w;
+    }
+    if let Some(h) = node_h {
+        opts.node_h = h;
+    }
+    let geometry = graph_layout::layout(&nodes, &edges, &lanes, &layers, &opts);
+    let gid = NEXT_GRAPH.fetch_add(1, Ordering::Relaxed);
+
+    let table = style_table(styles);
+    let used = used_styles(&table, &edges);
+    let marker_of: HashMap<String, String> = used
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.name.clone(), format!("cl-dag-{gid}-arrow-{i}")))
+        .collect();
+    let style_of = |name: &str| {
+        used.iter()
+            .find(|s| s.name == name)
+            .cloned()
+            .unwrap_or_else(|| EdgeStyle::new(name, name, Hue::Neutral))
+    };
+
+    // ---- interaction state --------------------------------------------------
+    let hovered = RwSignal::new(None::<String>);
+    let own_selection = RwSignal::new(None::<String>);
+    let is_selected = move |id: &str| match selected {
+        Some(s) => s.with(|s| s.as_deref() == Some(id)),
+        None => own_selection.with(|s| s.as_deref() == Some(id)),
+    };
+    let select = move |id: String| {
+        own_selection.set(Some(id.clone()));
+        if let Some(cb) = on_select {
+            cb.run(id);
+        }
+    };
+    let open = move |id: String| {
+        if let Some(cb) = on_open {
+            cb.run(id);
+        }
+    };
+    let mut neighbours: HashMap<String, HashSet<String>> = HashMap::new();
+    for e in &geometry.edges {
+        neighbours
+            .entry(e.from.clone())
+            .or_default()
+            .insert(e.to.clone());
+        neighbours
+            .entry(e.to.clone())
+            .or_default()
+            .insert(e.from.clone());
+    }
+    let neighbours = Arc::new(neighbours);
+
+    // ---- defs: one arrowhead per used style --------------------------------
+    let markers = used
+        .iter()
+        .map(|s| {
+            view! {
+                <marker
+                    id=marker_of[&s.name].clone()
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="8"
+                    markerHeight="8"
+                    markerUnits="userSpaceOnUse"
+                    orient="auto-start-reverse"
+                >
+                    <path
+                        class=format!("cl-dag__arrowhead cl-dag__hue--{}", s.hue.name())
+                        d="M 0 0 L 10 5 L 0 10 z"
+                    />
+                </marker>
+            }
+        })
+        .collect_view();
+
+    // ---- lanes and headers --------------------------------------------------
+    let lane_views = geometry
+        .lanes
+        .iter()
+        .map(|lane| {
+            view! {
+                <g class="cl-dag__lane-group" data-lane=lane.id.clone()>
+                    <rect
+                        class="cl-dag__lane"
+                        x=lane.x
+                        y=lane.y
+                        width=lane.w
+                        height=lane.h
+                        rx="10"
+                    />
+                    <text class="cl-dag__lane-label" x=lane.label_x y=lane.label_y>
+                        {clip(&lane.label, lane.w - 12.0, 6.0)}
+                    </text>
+                </g>
+            }
+        })
+        .collect_view();
+    let lr = opts.direction == Direction::LeftRight;
+    let header_views = geometry
+        .headers
+        .iter()
+        .map(|h| {
+            let baseline = if lr { "auto" } else { "middle" };
+            view! {
+                <text class="cl-dag__header" x=h.x y=h.y dominant-baseline=baseline>
+                    {h.label.clone()}
+                </text>
+            }
+        })
+        .collect_view();
+
+    // ---- edges ---------------------------------------------------------------
+    let edge_views = geometry
+        .edges
+        .iter()
+        .map(|placed| {
+            let edge = &edges[placed.index];
+            let style = style_of(&edge.style);
+            let base = edge_classes(&style);
+            let (from, to) = (placed.from.clone(), placed.to.clone());
+            let tip = edge
+                .label
+                .clone()
+                .unwrap_or_else(|| format!("{}: {} → {}", style.label, from, to));
+            let class = move || {
+                let hot = hovered.with(|h| h.as_deref().is_some_and(|h| h == from || h == to));
+                if hot {
+                    format!("{base} cl-dag__edge--hot")
+                } else {
+                    base.clone()
+                }
+            };
+            view! {
+                <path
+                    class=class
+                    d=placed.path.clone()
+                    marker-end=format!("url(#{})", marker_of[&style.name])
+                >
+                    <title>{tip}</title>
+                </path>
+            }
+        })
+        .collect_view();
+
+    // ---- nodes ---------------------------------------------------------------
+    let node_views = geometry
+        .nodes
+        .iter()
+        .map(|placed| {
+            let node = nodes[placed.index].clone();
+            let (x, y, w, h) = (placed.x, placed.y, placed.w, placed.h);
+            let id = node.id.clone();
+
+            // Static classes.
+            let mut base = format!("cl-dag__node {}", node.status.status_class());
+            if node.current {
+                base.push_str(" cl-dag__node--current");
+            }
+            if node.archived {
+                base.push_str(" cl-dag__node--archived");
+            }
+            if node.done {
+                base.push_str(" cl-dag__node--done");
+            }
+            let class = {
+                let id = id.clone();
+                let neighbours = neighbours.clone();
+                move || {
+                    let mut c = base.clone();
+                    if is_selected(&id) {
+                        c.push_str(" cl-dag__node--selected");
+                    }
+                    hovered.with(|h| {
+                        if let Some(h) = h.as_deref() {
+                            if h == id {
+                                c.push_str(" cl-dag__node--hot");
+                            } else if neighbours.get(h).is_some_and(|n| n.contains(&id)) {
+                                c.push_str(" cl-dag__node--near");
+                            }
+                        }
+                    });
+                    c
+                }
+            };
+            let pressed = {
+                let id = id.clone();
+                move || if is_selected(&id) { "true" } else { "false" }
+            };
+
+            // Text lines: label, sublabel, detail. Marks sit at the right
+            // end of the last line.
+            let marks_w: f64 = node
+                .marks
+                .iter()
+                .map(|m| m.label.chars().count() as f64 * 6.0 + 8.0)
+                .sum();
+            let mut lines: Vec<(&'static str, String, f64)> =
+                vec![("cl-dag__label", node.label.clone(), 7.0)];
+            if let Some(s) = &node.sublabel {
+                lines.push(("cl-dag__sublabel", s.clone(), 6.1));
+            }
+            if let Some(s) = &node.detail {
+                lines.push(("cl-dag__detail", s.clone(), 5.9));
+            }
+            let count = lines.len();
+            let first_y = y + h / 2.0 - (count as f64 - 1.0) * LINE / 2.0;
+            let last_y = first_y + (count as f64 - 1.0) * LINE;
+            let text_views = lines
+                .into_iter()
+                .enumerate()
+                .map(|(i, (class, text, char_w))| {
+                    let room = w - 2.0 * PAD - if i + 1 == count { marks_w } else { 0.0 };
+                    view! {
+                        <text
+                            class=class
+                            x=x + PAD
+                            y=first_y + i as f64 * LINE
+                            dominant-baseline="central"
+                        >
+                            {clip(&text, room, char_w)}
+                        </text>
+                    }
+                })
+                .collect_view();
+            let mut mark_x = x + w - PAD;
+            let mark_views = node
+                .marks
+                .iter()
+                .map(|m| {
+                    let at = mark_x;
+                    mark_x -= m.label.chars().count() as f64 * 6.0 + 8.0;
+                    view! {
+                        <text
+                            class=format!("cl-dag__mark cl-dag__hue--{}", m.hue.name())
+                            x=at
+                            y=last_y
+                            dominant-baseline="central"
+                        >
+                            {m.label.clone()}
+                        </text>
+                    }
+                })
+                .collect_view();
+
+            let mut aria = node.label.clone();
+            for part in [&node.sublabel, &node.detail].into_iter().flatten() {
+                aria.push_str(", ");
+                aria.push_str(part);
+            }
+            for m in &node.marks {
+                aria.push_str(", ");
+                aria.push_str(&m.label);
+            }
+            let tooltip = node.tooltip.clone().unwrap_or_else(|| aria.clone());
+
+            let (click_id, dbl_id, key_id, enter_id, focus_id) =
+                (id.clone(), id.clone(), id.clone(), id.clone(), id.clone());
+            let on_key = move |ev: leptos::ev::KeyboardEvent| match ev.key().as_str() {
+                "Enter" => {
+                    ev.prevent_default();
+                    if on_open.is_some() && is_selected(&key_id) {
+                        open(key_id.clone());
+                    } else {
+                        select(key_id.clone());
+                    }
+                }
+                " " | "Spacebar" => {
+                    ev.prevent_default();
+                    select(key_id.clone());
+                }
+                _ => {}
+            };
+
+            let more = (node.more > 0).then(|| {
+                let n = node.more;
+                let (more_id, more_key_id) = (id.clone(), id.clone());
+                let (cx, cy) = (x + w - 2.0, y + 2.0);
+                view! {
+                    <g
+                        class="cl-dag__more"
+                        role="button"
+                        tabindex="0"
+                        aria-label=format!("Show {n} more linked items")
+                        on:click=move |ev| {
+                            ev.stop_propagation();
+                            if let Some(cb) = on_more {
+                                cb.run(more_id.clone());
+                            }
+                        }
+                        on:keydown=move |ev: leptos::ev::KeyboardEvent| {
+                            if matches!(ev.key().as_str(), "Enter" | " " | "Spacebar") {
+                                ev.prevent_default();
+                                if let Some(cb) = on_more {
+                                    cb.run(more_key_id.clone());
+                                }
+                            }
+                        }
+                    >
+                        <title>{format!("{n} more linked items")}</title>
+                        <circle cx=cx cy=cy r="10" />
+                        <text x=cx y=cy dominant-baseline="central">
+                            {format!("+{n}")}
+                        </text>
+                    </g>
+                }
+            });
+
+            view! {
+                <g
+                    class=class
+                    data-id=id.clone()
+                    data-kind=node.kind.clone()
+                    role="button"
+                    tabindex="0"
+                    aria-label=aria
+                    aria-pressed=pressed
+                    on:click=move |_| select(click_id.clone())
+                    on:dblclick=move |_| open(dbl_id.clone())
+                    on:keydown=on_key
+                    on:mouseenter=move |_| hovered.set(Some(enter_id.clone()))
+                    on:mouseleave=move |_| hovered.set(None)
+                    on:focus=move |_| hovered.set(Some(focus_id.clone()))
+                    on:blur=move |_| hovered.set(None)
+                >
+                    <title>{tooltip}</title>
+                    <rect
+                        class="cl-dag__ring"
+                        x=x - 4.0
+                        y=y - 4.0
+                        width=w + 8.0
+                        height=h + 8.0
+                        rx="12"
+                    />
+                    <rect class="cl-dag__box" x=x y=y width=w height=h rx="8" />
+                    <rect class="cl-dag__tint" x=x y=y width=w height=h rx="8" />
+                    {text_views}
+                    {mark_views}
+                </g>
+                {more}
+            }
+        })
+        .collect_view();
+
+    let legend_view = legend.then(|| view! { <DagLegend styles=used.clone() /> });
+    let (w, h) = (geometry.width, geometry.height);
+    let svg_class = move || {
+        if hovered.with(Option::is_some) {
+            "cl-dag cl-dag--hovering"
+        } else {
+            "cl-dag"
+        }
+    };
+    let wrap_class = if fit {
+        "cl-dag-wrap"
+    } else {
+        "cl-dag-wrap cl-dag-wrap--scroll"
+    };
+    view! {
+        <div class=wrap_class>
+            {legend_view}
+            <svg
+                class=svg_class
+                width=w
+                height=h
+                viewBox=format!("0 0 {w} {h}")
+                role="group"
+                aria-label=label.unwrap_or_else(|| "Graph".to_string())
+            >
+                <defs>{markers}</defs>
+                {lane_views}
+                {header_views}
+                <g class="cl-dag__edges">{edge_views}</g>
+                <g class="cl-dag__nodes">{node_views}</g>
+            </svg>
+        </div>
+    }
+}
+
+/// A legend of edge styles: a sample line with its arrowhead and the label
+/// of each style. [`Dag`] shows one with `legend=true` (only the styles that
+/// its edges use); use this component alone to list other styles.
+#[component]
+pub fn DagLegend(styles: Vec<EdgeStyle>) -> impl IntoView {
+    let items = styles
+        .into_iter()
+        .map(|s| {
+            let hue = s.hue.name();
+            let mut line = format!("cl-dag__edge cl-dag__hue--{hue}");
+            if s.dashed {
+                line.push_str(" cl-dag__edge--dashed");
+            }
+            view! {
+                <span class="cl-dag-legend__item">
+                    <svg class="cl-dag-legend__sample" width="36" height="12" aria-hidden="true">
+                        <path class=line d="M 2 6 L 28 6" />
+                        <path
+                            class=format!("cl-dag__arrowhead cl-dag__hue--{hue}")
+                            d="M 26 2 L 34 6 L 26 10 z"
+                        />
+                    </svg>
+                    <span>{s.label}</span>
+                </span>
+            }
+        })
+        .collect_view();
+    view! { <div class="cl-dag-legend">{items}</div> }
+}
+
+// ---------------------------------------------------------------------------
+// The old API, kept for compatibility
+// ---------------------------------------------------------------------------
+
+/// A graph node for [`Graph`] (the old API). New code: [`DagNode`].
 #[derive(Clone, PartialEq)]
 pub struct GraphNode {
     pub id: String,
     pub label: String,
-    /// Accent color (node border + arrow into it can stay neutral). App-supplied.
+    /// A token colour (`token::OK`, ...). [`Graph`] maps it to the status
+    /// class of the same hue; a colour that is not a token draws neutral.
     pub color: String,
     /// Optional sub-label (e.g. a kind: "source", "sink").
     pub sublabel: Option<String>,
@@ -46,7 +603,18 @@ impl GraphNode {
     }
 }
 
-/// A directed edge `from → to`. `active` animates it (pulse).
+impl From<GraphNode> for DagNode {
+    fn from(n: GraphNode) -> Self {
+        DagNode {
+            status: Hue::from_token(&n.color).unwrap_or_default(),
+            sublabel: n.sublabel,
+            ..DagNode::new(n.id, n.label)
+        }
+    }
+}
+
+/// A directed edge `from → to` for [`Graph`] (the old API). `active`
+/// animates it. New code: [`DagEdge`].
 #[derive(Clone, PartialEq)]
 pub struct GraphEdge {
     pub from: String,
@@ -68,15 +636,22 @@ impl GraphEdge {
     }
 }
 
-/// A computed node position (center point).
+impl From<GraphEdge> for DagEdge {
+    fn from(e: GraphEdge) -> Self {
+        DagEdge::new(e.from, e.to).style(if e.active { "active" } else { DEFAULT_STYLE })
+    }
+}
+
+/// A computed node position (center point), from [`layout_dag`].
 pub struct NodePos {
     pub id: String,
     pub x: f64,
     pub y: f64,
 }
 
-/// Longest-path layered layout. Returns node centers + the canvas size.
-/// `lr` lays out left-to-right; otherwise top-to-bottom.
+/// The node centres and the canvas size, from the layout that [`Graph`]
+/// uses. Kept for compatibility; new code calls [`graph_layout::layout`],
+/// which also gives edge routes and lanes.
 pub fn layout_dag(
     nodes: &[GraphNode],
     edges: &[GraphEdge],
@@ -84,70 +659,34 @@ pub fn layout_dag(
     node_w: f64,
     node_h: f64,
 ) -> (Vec<NodePos>, f64, f64) {
-    let n = nodes.len();
-    let idx: HashMap<&str, usize> = nodes
-        .iter()
-        .enumerate()
-        .map(|(i, nd)| (nd.id.as_str(), i))
-        .collect();
-    let e: Vec<(usize, usize)> = edges
-        .iter()
-        .filter_map(|ed| Some((*idx.get(ed.from.as_str())?, *idx.get(ed.to.as_str())?)))
-        .collect();
-
-    // Longest-path layering (DAG): n relaxation passes converge.
-    let mut layer = vec![0usize; n];
-    for _ in 0..n {
-        for &(f, t) in &e {
-            if layer[t] < layer[f] + 1 {
-                layer[t] = layer[f] + 1;
-            }
-        }
-    }
-    let num_layers = layer.iter().copied().max().map(|m| m + 1).unwrap_or(1);
-
-    // Order within each layer by first appearance.
-    let mut counts = vec![0usize; num_layers];
-    let mut order = vec![0usize; n];
-    for i in 0..n {
-        let l = layer[i];
-        order[i] = counts[l];
-        counts[l] += 1;
-    }
-    let max_count = counts.iter().copied().max().unwrap_or(1).max(1) as f64;
-
-    let m = 24.0;
-    let along_gap = (if lr { node_h } else { node_w }) + 46.0; // siblings within a layer
-    let layer_gap = (if lr { node_w } else { node_h }) + 64.0; // between layers
-    let half_across = (if lr { node_w } else { node_h }) / 2.0;
-    let along_span = max_count * along_gap;
-
-    let mut pos = Vec::with_capacity(n);
-    for i in 0..n {
-        let l = layer[i] as f64;
-        let cnt = counts[layer[i]] as f64;
-        let o = order[i] as f64;
-        let along = m + along_span / 2.0 + (o - (cnt - 1.0) / 2.0) * along_gap;
-        let across = m + half_across + l * layer_gap;
-        let (x, y) = if lr { (across, along) } else { (along, across) };
-        pos.push(NodePos {
-            id: nodes[i].id.clone(),
-            x,
-            y,
-        });
-    }
-
-    let across_dim = 2.0 * m + 2.0 * half_across + (num_layers as f64 - 1.0) * layer_gap;
-    let along_dim = along_span + 2.0 * m;
-    let (w, h) = if lr {
-        (across_dim, along_dim)
-    } else {
-        (along_dim, across_dim)
+    let dag_nodes: Vec<DagNode> = nodes.iter().cloned().map(DagNode::from).collect();
+    let dag_edges: Vec<DagEdge> = edges.iter().cloned().map(DagEdge::from).collect();
+    let opts = LayoutOptions {
+        direction: if lr {
+            Direction::LeftRight
+        } else {
+            Direction::TopBottom
+        },
+        node_w,
+        node_h,
+        ..LayoutOptions::default()
     };
-    (pos, w, h)
+    let l = graph_layout::layout(&dag_nodes, &dag_edges, &[], &[], &opts);
+    let pos = l
+        .nodes
+        .iter()
+        .map(|p| NodePos {
+            id: p.id.clone(),
+            x: p.cx(),
+            y: p.cy(),
+        })
+        .collect();
+    (pos, l.width, l.height)
 }
 
-/// Renders `nodes` + `edges` as an auto-laid-out SVG DAG.
+/// The old graph component: `nodes` + `edges`, auto-laid-out. A thin wrapper
+/// over [`Dag`]; new code uses [`Dag`] for lanes, fixed layers, edge styles
+/// and a legend.
 #[component]
 pub fn Graph(
     nodes: Vec<GraphNode>,
@@ -157,91 +696,94 @@ pub fn Graph(
     direction: String,
     #[prop(default = 150.0)] node_w: f64,
     #[prop(default = 48.0)] node_h: f64,
+    /// Click, Space or Enter on a node.
+    #[prop(optional)]
+    on_select: Option<Callback<String>>,
+    /// Double click, or Enter on the selected node.
+    #[prop(optional)]
+    on_open: Option<Callback<String>>,
 ) -> impl IntoView {
-    let lr = direction.eq_ignore_ascii_case("LR");
-    let (pos, w, h) = layout_dag(&nodes, &edges, lr, node_w, node_h);
-    let map: HashMap<String, (f64, f64)> = pos.into_iter().map(|p| (p.id, (p.x, p.y))).collect();
+    let direction = if direction.eq_ignore_ascii_case("LR") {
+        Direction::LeftRight
+    } else {
+        Direction::TopBottom
+    };
+    let nodes: Vec<DagNode> = nodes.into_iter().map(DagNode::from).collect();
+    let edges: Vec<DagEdge> = edges.into_iter().map(DagEdge::from).collect();
+    let options = LayoutOptions {
+        direction,
+        node_w,
+        node_h,
+        ..LayoutOptions::default()
+    };
+    let select = Callback::new(move |id: String| {
+        if let Some(cb) = on_select {
+            cb.run(id);
+        }
+    });
+    let open = Callback::new(move |id: String| {
+        if let Some(cb) = on_open {
+            cb.run(id);
+        }
+    });
+    view! { <Dag nodes edges options on_select=select on_open=open /> }
+}
 
-    // Edges: a curved stroke + a fixed-orientation arrowhead at the target face.
-    let edge_views = edges
-        .iter()
-        .filter_map(|ed| {
-            let (fx, fy) = *map.get(&ed.from)?;
-            let (tx, ty) = *map.get(&ed.to)?;
-            let stroke_class = if ed.active {
-                "cl-graph__edge cl-graph__edge--active cl-pulse"
-            } else {
-                "cl-graph__edge"
-            };
-            let arrow_class = if ed.active {
-                "cl-graph__arrow cl-graph__arrow--active cl-pulse"
-            } else {
-                "cl-graph__arrow"
-            };
-            let (d, arrow) = if lr {
-                let (sx, sy, ex, ey) = (fx + node_w / 2.0, fy, tx - node_w / 2.0, ty);
-                let k = ((ex - sx) * 0.4).max(18.0);
-                (
-                    format!("M{sx},{sy} C{},{sy} {},{ey} {ex},{ey}", sx + k, ex - k),
-                    format!(
-                        "M{},{} L{ex},{ey} L{},{} Z",
-                        ex - 8.0,
-                        ey - 4.5,
-                        ex - 8.0,
-                        ey + 4.5
-                    ),
-                )
-            } else {
-                let (sx, sy, ex, ey) = (fx, fy + node_h / 2.0, tx, ty - node_h / 2.0);
-                let k = ((ey - sy) * 0.4).max(18.0);
-                (
-                    format!("M{sx},{sy} C{sx},{} {ex},{} {ex},{ey}", sy + k, ey - k),
-                    format!(
-                        "M{},{} L{ex},{ey} L{},{} Z",
-                        ex - 4.5,
-                        ey - 8.0,
-                        ex + 4.5,
-                        ey - 8.0
-                    ),
-                )
-            };
-            Some(view! {
-                <path class=stroke_class d=d />
-                <path class=arrow_class d=arrow />
-            })
-        })
-        .collect_view();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let node_views = nodes
-        .iter()
-        .map(|nd| {
-            let (cx, cy) = map.get(&nd.id).copied().unwrap_or((0.0, 0.0));
-            let x = cx - node_w / 2.0;
-            let y = cy - node_h / 2.0;
-            let has_sub = nd.sublabel.is_some();
-            let label_y = if has_sub { cy - 5.0 } else { cy };
-            view! {
-                <g>
-                    <rect
-                        class="cl-graph__node"
-                        x=x y=y width=node_w height=node_h rx="9"
-                        style=format!("stroke:{};", nd.color)
-                    />
-                    <text class="cl-graph__label" x=cx y=label_y text-anchor="middle" dominant-baseline="middle">
-                        {nd.label.clone()}
-                    </text>
-                    {nd.sublabel.clone().map(|s| view! {
-                        <text class="cl-graph__sublabel" x=cx y=cy + 11.0 text-anchor="middle" dominant-baseline="middle">{s}</text>
-                    })}
-                </g>
-            }
-        })
-        .collect_view();
+    #[test]
+    fn clip_adds_an_ellipsis_only_when_needed() {
+        assert_eq!(clip("short", 100.0, 7.0), "short");
+        assert_eq!(clip("a very long label", 42.0, 7.0), "a ver…");
+    }
 
-    view! {
-        <svg class="cl-graph" width=w height=h viewBox=format!("0 0 {w} {h}")>
-            {edge_views}
-            {node_views}
-        </svg>
+    #[test]
+    fn built_in_styles_are_added_under_the_product_styles() {
+        let table = style_table(Some(vec![EdgeStyle::new("default", "Mine", Hue::Ok)]));
+        assert_eq!(table[0].label, "Mine", "the product wins");
+        assert!(table.iter().any(|s| s.name == "active"));
+    }
+
+    #[test]
+    fn only_used_styles_are_listed_and_unknown_names_draw_neutral() {
+        let table = style_table(Some(vec![
+            EdgeStyle::new("ok", "Succeeded", Hue::Ok),
+            EdgeStyle::new("bad", "Failed", Hue::Bad),
+        ]));
+        let edges = vec![
+            DagEdge::new("a", "b").style("bad"),
+            DagEdge::new("b", "c").style("odd"),
+        ];
+        let used = used_styles(&table, &edges);
+        let names: Vec<&str> = used.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, vec!["bad", "odd"]);
+        assert_eq!(used[1].hue, Hue::Neutral);
+    }
+
+    #[test]
+    fn the_old_types_convert() {
+        let n: DagNode = GraphNode::new("a", "A")
+            .color(token::BAD)
+            .sublabel("s")
+            .into();
+        assert_eq!((n.status, n.sublabel.as_deref()), (Hue::Bad, Some("s")));
+        let n: DagNode = GraphNode::new("a", "A").color("hotpink").into();
+        assert_eq!(n.status, Hue::Neutral);
+        let e: DagEdge = GraphEdge::new("a", "b").active(true).into();
+        assert_eq!(e.style, "active");
+        let e: DagEdge = GraphEdge::new("a", "b").into();
+        assert_eq!(e.style, DEFAULT_STYLE);
+    }
+
+    #[test]
+    fn layout_dag_still_gives_centres_and_a_size() {
+        let nodes = vec![GraphNode::new("a", "A"), GraphNode::new("b", "B")];
+        let edges = vec![GraphEdge::new("a", "b")];
+        let (pos, w, h) = layout_dag(&nodes, &edges, true, 150.0, 48.0);
+        assert_eq!(pos.len(), 2);
+        assert!(pos[0].x < pos[1].x, "left to right");
+        assert!(w > 300.0 && h > 48.0);
     }
 }
