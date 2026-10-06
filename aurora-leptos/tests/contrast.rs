@@ -1,7 +1,9 @@
-//! WCAG AA contrast for the Aurora tokens, in the light and the dark theme.
+//! WCAG AA contrast for the Aurora tokens, in the light, the dark and the
+//! hyper theme.
 //!
 //! The test reads `style/tokens.css`, takes the light and the dark value of
-//! each `light-dark()` token, and computes the contrast of each text/fill pair
+//! each `light-dark()` token, and the hyper value from `style/hyper.css`
+//! (a token that hyper does not set takes its dark value), and computes the contrast of each text/fill pair
 //! that the components use. It fails when a pair is below its AA minimum:
 //! 4.5:1 for normal text, 3:1 for large text and for the edges of controls.
 //!
@@ -10,6 +12,7 @@
 use std::collections::HashMap;
 
 const TOKENS_CSS: &str = include_str!("../style/tokens.css");
+const HYPER_CSS: &str = include_str!("../style/hyper.css");
 
 #[derive(Clone, Copy, Debug)]
 struct Rgba {
@@ -23,6 +26,7 @@ struct Rgba {
 enum Theme {
     Light,
     Dark,
+    Hyper,
 }
 
 /// A parsed token value, before a theme is chosen.
@@ -96,6 +100,34 @@ fn parse_tokens() -> HashMap<String, Value> {
     map
 }
 
+/// Every `--name: value;` in the `:root[data-theme="hyper"]` block of
+/// `hyper.css`, colour or not.
+fn parse_hyper() -> HashMap<String, String> {
+    let start = HYPER_CSS
+        .find(":root[data-theme=\"hyper\"] {")
+        .expect("hyper.css has the hyper block");
+    let block = &HYPER_CSS[start..];
+    let block = &block[..block.find("\n}").expect("hyper block end")];
+    let mut map = HashMap::new();
+    for line in block.lines() {
+        let Some(rest) = line.trim().strip_prefix("--") else {
+            continue;
+        };
+        let Some((name, value)) = rest.split_once(':') else {
+            continue;
+        };
+        map.insert(
+            name.to_string(),
+            value.trim().trim_end_matches(';').trim().to_string(),
+        );
+    }
+    map
+}
+
+fn is_colour(v: &str) -> bool {
+    v.starts_with('#') || v.starts_with("rgba(")
+}
+
 fn parse_colour(s: &str) -> Rgba {
     let s = s.trim();
     if let Some(hex) = s.strip_prefix('#') {
@@ -127,11 +159,18 @@ fn parse_colour(s: &str) -> Rgba {
 
 struct Palette {
     tokens: HashMap<String, Value>,
+    /// The colour values of `:root[data-theme="hyper"]`.
+    hyper: HashMap<String, String>,
     theme: Theme,
 }
 
 impl Palette {
     fn get(&self, name: &str) -> Rgba {
+        if self.theme == Theme::Hyper {
+            if let Some(v) = self.hyper.get(name) {
+                return parse_colour(v);
+            }
+        }
         match self.tokens.get(name) {
             Some(Value::Pair(l, d)) => {
                 let v = if self.theme == Theme::Light { l } else { d };
@@ -221,12 +260,16 @@ const TEXT: &[&str] = &[
 fn check_theme(theme: Theme, rows: &mut Vec<Row>) {
     let p = Palette {
         tokens: parse_tokens(),
+        hyper: parse_hyper()
+            .into_iter()
+            .filter(|(_, v)| is_colour(v))
+            .collect(),
         theme,
     };
-    let name = if theme == Theme::Light {
-        "light"
-    } else {
-        "dark"
+    let name = match theme {
+        Theme::Light => "light",
+        Theme::Dark => "dark",
+        Theme::Hyper => "hyper",
     };
     let mut push = |what: String, fg: Rgba, bg: Rgba, need: f64| {
         rows.push(Row {
@@ -466,10 +509,11 @@ fn check_theme(theme: Theme, rows: &mut Vec<Row>) {
 }
 
 #[test]
-fn tokens_meet_wcag_aa_in_both_themes() {
+fn tokens_meet_wcag_aa_in_every_theme() {
     let mut rows = Vec::new();
     check_theme(Theme::Light, &mut rows);
     check_theme(Theme::Dark, &mut rows);
+    check_theme(Theme::Hyper, &mut rows);
 
     println!("| theme | pair | ratio | AA min | result |");
     println!("|---|---|---|---|---|");
@@ -490,4 +534,19 @@ fn tokens_meet_wcag_aa_in_both_themes() {
         "contrast below WCAG AA:\n{}",
         fails.join("\n")
     );
+}
+
+/// Hyper sets each token that has a light and a dark value, so no light or
+/// dark value shows through in hyper.
+#[test]
+fn hyper_sets_every_themed_token() {
+    let hyper = parse_hyper();
+    let missing: Vec<&str> = TOKENS_CSS
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("--"))
+        .filter(|l| l.contains("light-dark("))
+        .filter_map(|l| l.split_once(':').map(|(name, _)| name))
+        .filter(|name| !hyper.contains_key(*name))
+        .collect();
+    assert!(missing.is_empty(), "hyper.css does not set: {missing:?}");
 }

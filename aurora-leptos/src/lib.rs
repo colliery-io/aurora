@@ -41,7 +41,8 @@
 //!   Framework-agnostic Rust.
 //! - **Theme** ([`theme`]) — light, dark or system: [`ThemeToggle`],
 //!   `set_theme`, `current_theme`, `use_theme`, and [`THEME_INIT_SCRIPT`] for a
-//!   first paint with no flash.
+//!   first paint with no flash. The opt-in hyper theme (neon on dark) needs
+//!   [`HYPER_CSS`] too, and `ThemeToggle hyper=true`.
 //!
 //! Genuinely app-specific surfaces (side panels, node detail views, branding)
 //! are built downstream from these primitives. The graph layout and its
@@ -114,29 +115,46 @@ pub const COMPONENTS_CSS: &str = include_str!("../style/components.css");
 pub const GRAPH_CSS: &str = include_str!("../style/graph.css");
 /// Just the IBM Plex `@font-face` declarations.
 pub const FONTS_CSS: &str = include_str!("../style/fonts.css");
+/// The opt-in hyper theme: neon hues on a dark base, with a glow on accents.
+/// Not in [`AURORA_CSS`]. Load it after the Aurora stylesheet, then show it
+/// with `ThemeToggle hyper=true` or `set_theme(Theme::Hyper)`.
+pub const HYPER_CSS: &str = include_str!("../style/hyper.css");
 
 /// Writes the full stylesheet to `dir/aurora.css` and returns the path. Leptos-free
 /// — call it from `build.rs` (cargo-leptos) or via the `aurora-css` bin in a trunk
 /// `pre_build` hook to ship Aurora as a normal, render-blocking stylesheet.
 /// Use `default-features = false` so leptos isn't built for the host.
 pub fn write_css(dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+    write_file(dir, "aurora.css", AURORA_CSS)
+}
+
+/// Writes the opt-in hyper theme ([`HYPER_CSS`]) to `dir/hyper.css` and
+/// returns the path. `<link>` it after `aurora.css`.
+pub fn write_hyper_css(dir: &std::path::Path) -> std::io::Result<std::path::PathBuf> {
+    write_file(dir, "hyper.css", HYPER_CSS)
+}
+
+fn write_file(dir: &std::path::Path, name: &str, css: &str) -> std::io::Result<std::path::PathBuf> {
     std::fs::create_dir_all(dir)?;
-    let path = dir.join("aurora.css");
-    std::fs::write(&path, AURORA_CSS)?;
+    let path = dir.join(name);
+    std::fs::write(&path, css)?;
     Ok(path)
 }
 
 /// Injects the complete stylesheet as an inline `<style>` (runtime fallback for
 /// CSR-only setups). Prefer a build-time `<link>` (see [`write_css`]) to avoid a
-/// first-paint flash.
+/// first-paint flash. `hyper=true` adds the opt-in hyper theme ([`HYPER_CSS`]).
 #[cfg(feature = "components")]
 mod styles {
-    use super::AURORA_CSS;
+    use super::{AURORA_CSS, HYPER_CSS};
     use leptos::prelude::*;
 
     #[component]
-    pub fn AuroraStyles() -> impl IntoView {
-        view! { <style>{AURORA_CSS}</style> }
+    pub fn AuroraStyles(#[prop(optional)] hyper: bool) -> impl IntoView {
+        view! {
+            <style>{AURORA_CSS}</style>
+            {hyper.then(|| view! { <style>{HYPER_CSS}</style> })}
+        }
     }
 }
 #[cfg(feature = "components")]

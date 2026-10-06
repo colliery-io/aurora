@@ -8,9 +8,11 @@
     <meta name="color-scheme" content="light dark" />
     <!-- No flash: aurora_leptos::THEME_INIT_SCRIPT, verbatim. It sets
          data-theme from localStorage before the first paint. -->
-    <script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"){var d=document.documentElement;d.setAttribute("data-theme",t);d.style.colorScheme=t;}}catch(e){}})();</script>
+    <script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"||t==="hyper"){var d=document.documentElement;d.setAttribute("data-theme",t);if(t!=="hyper")d.style.colorScheme=t;}}catch(e){}})();</script>
     <!-- Aurora stylesheet, emitted by the pre_build hook (aurora_leptos::write_css). -->
     <link data-trunk rel="css" href="style/aurora.css" />
+    <!-- The opt-in hyper theme (aurora_leptos::write_hyper_css, `aurora-css --hyper`). -->
+    <link data-trunk rel="css" href="style/hyper.css" />
     <!-- gallery-only chrome (not part of the design system) -->
     <link data-trunk rel="css" href="gallery.css" />
     <!-- Identical wasm-opt setting on both galleries for a fair size comparison. -->

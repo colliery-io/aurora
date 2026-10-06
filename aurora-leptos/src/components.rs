@@ -539,7 +539,8 @@ pub fn Dot(
     #[prop(default = 8)] size: i32,
     #[prop(optional)] glow: bool,
 ) -> impl IntoView {
-    let mut style = format!("width:{size}px;height:{size}px;background:{color};");
+    // `color` too: the hyper glow draws in currentColor.
+    let mut style = format!("width:{size}px;height:{size}px;background:{color};color:{color};");
     if glow {
         style.push_str(&format!("box-shadow:0 0 0 3px {};", tint(&color, 13)));
     }
