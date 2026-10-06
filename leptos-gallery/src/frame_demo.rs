@@ -6,6 +6,7 @@ use std::time::Duration;
 use aurora_leptos::components::*;
 use aurora_leptos::theme::ThemeToggle;
 use aurora_leptos::tokens::token;
+use aurora_leptos::widgets::Banner;
 use leptos::prelude::*;
 
 use crate::Section;
@@ -232,7 +233,7 @@ pub fn FrameSections() -> impl IntoView {
         </Drawer>
 
         // ---- ConfirmDialog ----
-        <Section id="confirm" title="ConfirmDialog" caption="consequence text · list of what changes · type the name to confirm · danger button · busy state">
+        <Section id="confirm" title="ConfirmDialog" caption="consequence text · a notice before the list · list of what changes · type the name to confirm · danger button · busy state">
             <Group wrap=true gap="sm">
                 <Button bad=true on_click=Callback::new(move |_| del_open.set(true))>"Delete workflow…"</Button>
                 <Button variant="default" on_click=Callback::new(move |_| arch_open.set(true))>"Archive board…"</Button>
@@ -261,6 +262,9 @@ pub fn FrameSections() -> impl IntoView {
             title="Archive COLLIERY-I-0232?"
             message="Archiving moves the item and its children out of the board. You can restore them later."
             impacts=vec!["COLLIERY-T-1830".to_string(), "COLLIERY-T-1831".to_string(), "COLLIERY-T-1832".to_string()]
+            notice=std::sync::Arc::new(|| view! {
+                <Banner>"Two of these items have open blockers."</Banner>
+            }.into_any())
             confirm_label="Archive"
             danger=false
             on_confirm=Callback::new(move |_| {
