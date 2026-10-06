@@ -1108,6 +1108,9 @@ pub fn FeedList(#[prop(optional, into)] label: String, children: Children) -> im
 /// - `dot`: a hue token for a status dot at the start.
 /// - `href`: the row is a link. `on_click`: the row is a button. With
 ///   neither, the row is plain text.
+/// - `keep_time_slot`: keep the empty time column when the row has no `at`
+///   and no `time`, so it lines up with rows that have one. By default a
+///   row with no time has no time column.
 #[component]
 pub fn FeedRow(
     #[prop(optional)] at: Option<f64>,
@@ -1119,12 +1122,26 @@ pub fn FeedRow(
     #[prop(optional, into)] dot: String,
     #[prop(optional, into)] href: String,
     #[prop(optional)] on_click: Option<Callback<()>>,
+    #[prop(optional)] keep_time_slot: bool,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let has_time = at.is_some() || !time.is_empty() || keep_time_slot;
     let time_view = match at {
-        Some(t) => view! { <span class="cl-feed__time"><RelativeTime at=t /></span> }.into_any(),
-        None if !time.is_empty() => view! { <span class="cl-feed__time">{time}</span> }.into_any(),
-        None => view! { <span class="cl-feed__time"></span> }.into_any(),
+        Some(t) => {
+            Some(view! { <span class="cl-feed__time"><RelativeTime at=t /></span> }.into_any())
+        }
+        None if !time.is_empty() => {
+            Some(view! { <span class="cl-feed__time">{time}</span> }.into_any())
+        }
+        None if keep_time_slot => Some(view! { <span class="cl-feed__time"></span> }.into_any()),
+        None => None,
+    };
+    let row_class = |base: &str| {
+        if has_time {
+            base.to_string()
+        } else {
+            format!("{base} cl-feed__row--no-time")
+        }
     };
     // The dot slot is always there, so the subjects line up in a list where
     // only some rows have a dot.
@@ -1151,16 +1168,17 @@ pub fn FeedRow(
     let text = children.map(|c| view! { <span class="cl-feed__text">{c()}</span> });
     let inner = view! { {time_view} {dot_view} {subject_view} {actor_view} {pill} {text} };
     let row = if !href.is_empty() {
-        view! { <a class="cl-feed__row cl-feed__row--link" href=href>{inner}</a> }.into_any()
+        view! { <a class=row_class("cl-feed__row cl-feed__row--link") href=href>{inner}</a> }
+            .into_any()
     } else if let Some(cb) = on_click {
         view! {
-            <button type="button" class="cl-feed__row cl-feed__row--link" on:click=move |_| cb.run(())>
+            <button type="button" class=row_class("cl-feed__row cl-feed__row--link") on:click=move |_| cb.run(())>
                 {inner}
             </button>
         }
         .into_any()
     } else {
-        view! { <div class="cl-feed__row">{inner}</div> }.into_any()
+        view! { <div class=row_class("cl-feed__row")>{inner}</div> }.into_any()
     };
     view! { <li class="cl-feed__item">{row}</li> }
 }
@@ -1177,6 +1195,10 @@ pub fn FeedRow(
 /// - `page_sizes` (optional): the choices of the "Rows" select, for example
 ///   `vec![20, 50, 100]`. With none, there is no select.
 /// - `on_change` (optional): runs with `(offset, limit)` after a change.
+/// - `show_range` (default true): show the range text. `false` hides it.
+/// - `range_label` (optional): makes the range text from the
+///   [`PageRange`] (for example "Page 3 of 11"). Default:
+///   [`page_range_label`] ("41–60 of 212").
 ///
 /// A new page size keeps the first item of the page in view.
 #[component]
@@ -1188,8 +1210,14 @@ pub fn Pagination(
     #[prop(default = "Previous".to_string(), into)] prev_label: String,
     #[prop(default = "Next".to_string(), into)] next_label: String,
     #[prop(optional)] on_change: Option<Callback<(usize, usize)>>,
+    #[prop(default = true)] show_range: bool,
+    #[prop(optional)] range_label: Option<Callback<PageRange, String>>,
 ) -> impl IntoView {
     let range = Memo::new(move |_| page_range(offset.get(), limit.get(), total.get()));
+    let range_text = move || match range_label {
+        Some(cb) => cb.run(range.get()),
+        None => page_range_label(&range.get()),
+    };
     let notify = move || {
         if let Some(cb) = on_change {
             cb.run((offset.get_untracked(), limit.get_untracked()));
@@ -1229,9 +1257,9 @@ pub fn Pagination(
     });
     view! {
         <nav class="cl-pager" aria-label="Pagination">
-            <span class="cl-pager__range cl-tnum" aria-live="polite">
-                {move || page_range_label(&range.get())}
-            </span>
+            {show_range.then(|| view! {
+                <span class="cl-pager__range cl-tnum" aria-live="polite">{range_text}</span>
+            })}
             <span class="cl-pager__controls">
                 {sizes}
                 <Button

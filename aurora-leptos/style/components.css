@@ -1240,7 +1240,10 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   overflow-wrap: anywhere;
 }
 .cl-stat__unit { font-size: 12px; font-weight: 500; color: var(--muted); }
-.cl-stat__foot { display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.cl-stat__foot { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+/* A long sub line or delta wraps inside the tile, even a long word
+   (AURORA-T-0007 item 7). */
+.cl-stat__sub, .cl-stat__delta { min-width: 0; overflow-wrap: anywhere; }
 .cl-stat__delta { color: var(--muted); font-weight: 600; }
 .cl-stat__spark { margin-top: auto; padding-top: 6px; color: var(--stat-color, var(--ice)); }
 
@@ -1398,12 +1401,14 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   .cl-feed__row { flex-wrap: wrap; row-gap: 3px; }
   .cl-feed__subject { flex: 1; max-width: none; }
   .cl-feed__text { flex-basis: 100%; padding-left: 92px; box-sizing: border-box; white-space: normal; }
+  /* A row with no time slot: the text lines up after the dot. */
+  .cl-feed__row--no-time .cl-feed__text { padding-left: 18px; }
 }
 
 /* ----- Pagination ----- */
 .cl-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 8px 0; }
 .cl-pager__range { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.cl-pager__controls { display: inline-flex; align-items: center; gap: 8px; }
+.cl-pager__controls { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
 .cl-pager__size { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
 .cl-pager__size-label { font-size: 12px; color: var(--muted); }
 .cl-input.cl-pager__select { height: var(--h-xs); width: auto; padding-left: 10px; font-size: var(--fs-xs); }
