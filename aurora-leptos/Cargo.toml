@@ -88,3 +88,10 @@ hlin-view = { version = ">=0.0.1, <0.2", default-features = false, optional = tr
 # Envelopes are JSON documents; `raw` shows one and `stat` reads a value out of
 # one. Only needed by the `hlin` feature.
 serde_json = { version = "1", optional = true }
+
+[dev-dependencies]
+# Render components to HTML in native tests (AURORA-T-0007).
+leptos = { version = "0.8", features = ["ssr"] }
+# An executor for the effects of a component in a native test: with the
+# workspace's `csr` feature on, `Effect::new` needs one.
+any_spawner = { version = "0.3", features = ["futures-executor"] }
