@@ -43,10 +43,18 @@ pub(crate) fn field_id() -> String {
 // Layout: Group / Stack
 // ----------------------------------------------------------------------------
 
+/// A horizontal flex row.
+///
+/// - `justify`: `"between"` or `"end"` (default: the start).
+/// - `align`: the cross axis. `"center"` (default), `"start"`, `"end"` (the
+///   bottom edge: a labelled field and a button line up on the control),
+///   `"baseline"` or `"stretch"`. `top=true` is the same as `align="start"`.
+/// - `wrap`, `gap` (`"xs"`, `"sm"`; default `md`).
 #[component]
 pub fn Group(
     #[prop(optional, into)] justify: String,
     #[prop(optional)] top: bool,
+    #[prop(optional, into)] align: String,
     #[prop(optional)] wrap: bool,
     #[prop(optional, into)] gap: String,
     children: Children,
@@ -57,8 +65,12 @@ pub fn Group(
         "end" => class.push_str(" cl-group--end"),
         _ => {}
     }
-    if top {
-        class.push_str(" cl-group--top");
+    match (top, align.as_str()) {
+        (true, _) | (_, "start" | "top") => class.push_str(" cl-group--top"),
+        (_, "end" | "bottom") => class.push_str(" cl-group--bottom"),
+        (_, "baseline") => class.push_str(" cl-group--baseline"),
+        (_, "stretch") => class.push_str(" cl-group--stretch"),
+        _ => {}
     }
     if wrap {
         class.push_str(" cl-group--wrap");
@@ -235,9 +247,35 @@ pub fn Button(
 // TextInput / Select
 // ----------------------------------------------------------------------------
 
+/// The id of a control: the `id` prop when a product gives one (so a label
+/// outside the component can point at it), else a new unique id.
+fn control_id(id: String) -> String {
+    if id.is_empty() {
+        field_id()
+    } else {
+        id
+    }
+}
+
+/// The message under a field, while `error` is not empty. `error` is a
+/// signal, so the message can come and go (AURORA-T-0007 item 12).
+fn field_error(error: Signal<String>, err_id: String) -> impl IntoView {
+    move || {
+        let e = error.get();
+        (!e.is_empty()).then(|| {
+            view! { <span class="cl-field__error" id=err_id.clone()>{e}</span> }
+        })
+    }
+}
+
 /// A one-line text field, bound to `value`.
 ///
 /// - `label`, `placeholder`, `error` (a red border and a message under it).
+///   `error` takes a `String`, a `&str`, a signal or a closure, so the
+///   message can change while the field is shown.
+/// - `id`: the `id` of the `<input>`, for a `<label for=…>` outside the
+///   component. Default: a unique id.
+/// - `aria_label`: the accessible name when there is no visible `label`.
 /// - `input_type`: the `type` attribute, `"text"` by default (`"email"`,
 ///   `"url"`, `"search"`, `"date"`, `"password"`...).
 /// - `disabled`: a `bool`, a signal or a closure.
@@ -252,7 +290,7 @@ pub fn TextInput(
     #[prop(optional, into)] label: String,
     #[prop(optional, into)] placeholder: String,
     value: RwSignal<String>,
-    #[prop(optional, into)] error: String,
+    #[prop(optional, into)] error: Signal<String>,
     #[prop(optional, into)] input_type: String,
     #[prop(optional, into)] disabled: Signal<bool>,
     #[prop(optional)] on_input: Option<Callback<String>>,
@@ -262,11 +300,10 @@ pub fn TextInput(
     #[prop(optional)] required: bool,
     #[prop(optional)] spellcheck: Option<bool>,
     #[prop(optional)] mono: bool,
+    #[prop(optional, into)] id: String,
+    #[prop(optional, into)] aria_label: String,
 ) -> impl IntoView {
     let mut input_class = String::from("cl-input");
-    if !error.is_empty() {
-        input_class.push_str(" cl-input--error");
-    }
     if mono {
         input_class.push_str(" cl-mono");
     }
@@ -276,9 +313,10 @@ pub fn TextInput(
         input_type
     };
     let has_label = !label.is_empty();
-    let has_error = !error.is_empty();
-    let id = field_id();
+    let has_error = move || error.with(|e| !e.is_empty());
+    let id = control_id(id);
     let err_id = format!("{id}-error");
+    let described = err_id.clone();
     view! {
         <div class="cl-field">
             {has_label.then(|| view! {
@@ -286,15 +324,17 @@ pub fn TextInput(
             })}
             <input
                 class=input_class
+                class:cl-input--error=has_error
                 id=id
                 type=input_type
                 placeholder=attr(placeholder)
                 name=attr(name)
                 autocomplete=attr(autocomplete)
+                aria-label=attr(aria_label)
                 required=required
                 spellcheck=spellcheck.map(|s| if s { "true" } else { "false" })
-                aria-invalid=has_error.then_some("true")
-                aria-describedby=has_error.then(|| err_id.clone())
+                aria-invalid=move || has_error().then_some("true")
+                aria-describedby=move || has_error().then(|| described.clone())
                 disabled=move || disabled.get()
                 prop:value=move || value.get()
                 on:input=move |e| {
@@ -306,9 +346,22 @@ pub fn TextInput(
                     if let Some(cb) = on_change { cb.run(event_target_value(&e)); }
                 }
             />
-            {has_error.then(|| view! { <span class="cl-field__error" id=err_id>{error}</span> })}
+            {field_error(error, err_id)}
         </div>
     }
+}
+
+/// The value that a [`Select`] shows: `value` when an option has it (or when
+/// there is a placeholder, whose value is `""`), else the first option, as a
+/// native `<select>` does (AURORA-T-0007 item 8).
+pub fn select_shown_value(value: &str, options: &[String], has_placeholder: bool) -> String {
+    if has_placeholder || options.iter().any(|o| o == value) {
+        return value.to_string();
+    }
+    options
+        .first()
+        .cloned()
+        .unwrap_or_else(|| value.to_string())
 }
 
 /// A native select, bound to `value`.
@@ -319,8 +372,16 @@ pub fn TextInput(
 ///   `options`.
 /// - `placeholder`: a first choice with the value `""` (such as "Choose a
 ///   board" or "(none)").
+/// - `aria_label`: the accessible name when there is no visible `label`.
+///   (`attr:aria-label` goes on the wrapper `<div>`, not on the `<select>`.)
+/// - `id`: the `id` of the `<select>`, for a `<label for=…>` outside the
+///   component. Default: a unique id.
 /// - `disabled`, `on_change` (runs with the new value), `name`, `required`,
-///   `error`.
+///   `error` (a `String`, a `&str`, a signal or a closure).
+///
+/// When `value` matches no option and there is no placeholder, the select
+/// shows the first option, as a native select does. `value` itself is not
+/// changed.
 #[component]
 pub fn Select(
     #[prop(optional, into)] label: String,
@@ -332,46 +393,52 @@ pub fn Select(
     #[prop(optional)] on_change: Option<Callback<String>>,
     #[prop(optional, into)] name: String,
     #[prop(optional)] required: bool,
-    #[prop(optional, into)] error: String,
+    #[prop(optional, into)] error: Signal<String>,
+    #[prop(optional, into)] id: String,
+    #[prop(optional, into)] aria_label: String,
 ) -> impl IntoView {
     let has_label = !label.is_empty();
-    let has_error = !error.is_empty();
+    let has_error = move || error.with(|e| !e.is_empty());
     let pairs = options
         .into_iter()
         .map(|o| (o.clone(), o))
         .chain(option_pairs)
         .collect::<Vec<_>>();
-    let placeholder_opt = (!placeholder.is_empty())
-        .then(|| view! { <option value="" selected=move || value.get().is_empty()>{placeholder}</option> });
+    let has_placeholder = !placeholder.is_empty();
+    let values = StoredValue::new(pairs.iter().map(|(v, _)| v.clone()).collect::<Vec<_>>());
+    let shown = Memo::new(move |_| {
+        values.with_value(|vs| select_shown_value(&value.get(), vs, has_placeholder))
+    });
+    let placeholder_opt = has_placeholder
+        .then(|| view! { <option value="" selected=move || shown.get().is_empty()>{placeholder}</option> });
     let opts = pairs
         .into_iter()
         .map(|(v, l)| {
             let sel = v.clone();
             // `selected` as well as `prop:value` on the select: the value is
             // right on the first render, before the options exist.
-            view! { <option value=v selected=move || value.get() == sel>{l}</option> }
+            view! { <option value=v selected=move || shown.with(|s| *s == sel)>{l}</option> }
         })
         .collect_view();
-    let id = field_id();
+    let id = control_id(id);
     let err_id = format!("{id}-error");
-    let mut class = String::from("cl-input cl-select");
-    if has_error {
-        class.push_str(" cl-input--error");
-    }
+    let described = err_id.clone();
     view! {
         <div class="cl-field">
             {has_label.then(|| view! {
                 <label class="cl-field__label" for=id.clone()>{label}</label>
             })}
             <select
-                class=class
+                class="cl-input cl-select"
+                class:cl-input--error=has_error
                 id=id
                 name=attr(name)
+                aria-label=attr(aria_label)
                 required=required
-                aria-invalid=has_error.then_some("true")
-                aria-describedby=has_error.then(|| err_id.clone())
+                aria-invalid=move || has_error().then_some("true")
+                aria-describedby=move || has_error().then(|| described.clone())
                 disabled=move || disabled.get()
-                prop:value=move || value.get()
+                prop:value=move || shown.get()
                 on:change=move |e| {
                     let v = event_target_value(&e);
                     value.set(v.clone());
@@ -381,7 +448,7 @@ pub fn Select(
                 {placeholder_opt}
                 {opts}
             </select>
-            {has_error.then(|| view! { <span class="cl-field__error" id=err_id>{error}</span> })}
+            {field_error(error, err_id)}
         </div>
     }
 }
@@ -497,6 +564,12 @@ pub fn Panel(
     }
 }
 
+/// A filter chip: a toggle button.
+///
+/// - `label`, `count` (shown when 0 or more), `active`, `on_click`.
+///
+/// It is a `type="button"` (it does not submit a form) with `aria-pressed`
+/// from `active`, so a screen reader says whether the filter is on.
 #[component]
 pub fn Chip(
     #[prop(into)] label: String,
@@ -506,8 +579,10 @@ pub fn Chip(
 ) -> impl IntoView {
     view! {
         <button
+            type="button"
             class="cl-chip"
             class:cl-chip--active=move || active.get()
+            aria-pressed=move || if active.get() { "true" } else { "false" }
             on:click=move |_| { if let Some(cb) = on_click { cb.run(()); } }
         >
             {label}
@@ -532,11 +607,41 @@ pub fn Loading(#[prop(default = "Loading…".to_string(), into)] label: String) 
     }
 }
 
+/// An empty state: a message, and an optional next step.
+///
+/// - `message`: what is empty ("No agents yet.").
+/// - `hint` (optional): the next step, in a smaller line under it ("Install
+///   an agent to see it here.").
+/// - `href` + `link` (optional): a link after the hint ("Read how", the
+///   default text when only `href` is given).
+/// - children (optional): any next-step content (a button, a link) under the
+///   message and the hint.
 #[component]
-pub fn Empty(#[prop(into)] message: String) -> impl IntoView {
+pub fn Empty(
+    #[prop(into)] message: String,
+    #[prop(optional, into)] hint: String,
+    #[prop(optional, into)] href: String,
+    #[prop(optional, into)] link: String,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let anchor = (!href.is_empty()).then(|| {
+        let text = if link.is_empty() {
+            "Read how".to_string()
+        } else {
+            link
+        };
+        view! { <Anchor href=href>{text}</Anchor> }
+    });
+    let has_next = !hint.is_empty() || anchor.is_some();
+    let next = has_next.then(|| {
+        let gap = (!hint.is_empty() && anchor.is_some()).then_some(" ");
+        view! { <p class="cl-empty__next">{hint}{gap}{anchor}</p> }
+    });
     view! {
-        <div class="cl-center">
+        <div class="cl-center cl-empty">
             <Text dimmed=true>{message}</Text>
+            {next}
+            {children.map(|c| view! { <div class="cl-empty__actions">{c()}</div> })}
         </div>
     }
 }
@@ -723,29 +828,30 @@ pub fn SegmentedControl(options: Vec<String>, value: RwSignal<String>) -> impl I
 /// Multi-line text field (Mantine `Textarea`), bound to `value`.
 ///
 /// Same props as [`TextInput`] where they apply: `disabled`, `on_input`,
-/// `on_change`, `name`, `required`, `error`, `mono`. `rows` (default 4).
+/// `on_change`, `name`, `required`, `error` (a string, a signal or a
+/// closure), `mono`, `id`, `aria_label`. `rows` (default 4).
 #[component]
 pub fn Textarea(
     #[prop(optional, into)] label: String,
     #[prop(optional, into)] placeholder: String,
     value: RwSignal<String>,
     #[prop(default = 4)] rows: i32,
-    #[prop(optional, into)] error: String,
+    #[prop(optional, into)] error: Signal<String>,
     #[prop(optional, into)] disabled: Signal<bool>,
     #[prop(optional)] on_input: Option<Callback<String>>,
     #[prop(optional)] on_change: Option<Callback<String>>,
     #[prop(optional, into)] name: String,
     #[prop(optional)] required: bool,
     #[prop(optional)] mono: bool,
+    #[prop(optional, into)] id: String,
+    #[prop(optional, into)] aria_label: String,
 ) -> impl IntoView {
     let has_label = !label.is_empty();
-    let has_error = !error.is_empty();
-    let id = field_id();
+    let has_error = move || error.with(|e| !e.is_empty());
+    let id = control_id(id);
     let err_id = format!("{id}-error");
+    let described = err_id.clone();
     let mut class = String::from("cl-input");
-    if has_error {
-        class.push_str(" cl-input--error");
-    }
     if mono {
         class.push_str(" cl-mono");
     }
@@ -756,13 +862,15 @@ pub fn Textarea(
             })}
             <textarea
                 class=class
+                    class:cl-input--error=has_error
                 id=id
                 rows=rows
                 placeholder=attr(placeholder)
                 name=attr(name)
+                aria-label=attr(aria_label)
                 required=required
-                aria-invalid=has_error.then_some("true")
-                aria-describedby=has_error.then(|| err_id.clone())
+                aria-invalid=move || has_error().then_some("true")
+                aria-describedby=move || has_error().then(|| described.clone())
                 disabled=move || disabled.get()
                 prop:value=move || value.get()
                 on:input=move |e| {
@@ -774,7 +882,7 @@ pub fn Textarea(
                     if let Some(cb) = on_change { cb.run(event_target_value(&e)); }
                 }
             ></textarea>
-            {has_error.then(|| view! { <span class="cl-field__error" id=err_id>{error}</span> })}
+            {field_error(error, err_id)}
         </div>
     }
 }
@@ -783,7 +891,7 @@ pub fn Textarea(
 ///
 /// - `step` (default 1), `min` and `max` (the steppers stop there).
 /// - `disabled`, `on_change` (runs with the new number), `name`, `required`,
-///   `error`.
+///   `error` (a string, a signal or a closure), `id` (of the `<input>`).
 #[component]
 pub fn NumberInput(
     #[prop(optional, into)] label: String,
@@ -791,14 +899,15 @@ pub fn NumberInput(
     #[prop(default = 1.0)] step: f64,
     #[prop(optional)] min: Option<f64>,
     #[prop(optional)] max: Option<f64>,
-    #[prop(optional, into)] error: String,
+    #[prop(optional, into)] error: Signal<String>,
     #[prop(optional, into)] disabled: Signal<bool>,
     #[prop(optional)] on_change: Option<Callback<f64>>,
     #[prop(optional, into)] name: String,
     #[prop(optional)] required: bool,
+    #[prop(optional, into)] id: String,
 ) -> impl IntoView {
     let has_label = !label.is_empty();
-    let has_error = !error.is_empty();
+    let has_error = move || error.with(|e| !e.is_empty());
     let fmt = move || {
         let v = value.get();
         if v.fract() == 0.0 {
@@ -818,12 +927,10 @@ pub fn NumberInput(
             cb.run(v);
         }
     };
-    let id = field_id();
+    let id = control_id(id);
     let err_id = format!("{id}-error");
-    let mut class = String::from("cl-input");
-    if has_error {
-        class.push_str(" cl-input--error");
-    }
+    let described = err_id.clone();
+    let class = "cl-input";
     view! {
         <div class="cl-field">
             {has_label.then(|| view! {
@@ -832,6 +939,7 @@ pub fn NumberInput(
             <div class="cl-number">
                 <input
                     class=class
+                    class:cl-input--error=has_error
                     id=id
                     type="number"
                     step=step
@@ -839,8 +947,8 @@ pub fn NumberInput(
                     max=max
                     name=attr(name)
                     required=required
-                    aria-invalid=has_error.then_some("true")
-                    aria-describedby=has_error.then(|| err_id.clone())
+                    aria-invalid=move || has_error().then_some("true")
+                    aria-describedby=move || has_error().then(|| described.clone())
                     disabled=move || disabled.get()
                     prop:value=fmt
                     on:input=move |e| {
@@ -866,7 +974,7 @@ pub fn NumberInput(
                     >"▼"</button>
                 </div>
             </div>
-            {has_error.then(|| view! { <span class="cl-field__error" id=err_id>{error}</span> })}
+            {field_error(error, err_id)}
         </div>
     }
 }
@@ -875,29 +983,29 @@ pub fn NumberInput(
 ///
 /// - `autocomplete`: `"current-password"` on a sign-in form,
 ///   `"new-password"` on a form that sets one, so a password manager helps.
-/// - `disabled`, `on_input`, `on_change`, `name`, `required`, `error`.
+/// - `disabled`, `on_input`, `on_change`, `name`, `required`, `error` (a
+///   string, a signal or a closure), `id` (of the `<input>`).
 #[component]
 pub fn PasswordInput(
     #[prop(optional, into)] label: String,
     #[prop(optional, into)] placeholder: String,
     value: RwSignal<String>,
-    #[prop(optional, into)] error: String,
+    #[prop(optional, into)] error: Signal<String>,
     #[prop(optional, into)] disabled: Signal<bool>,
     #[prop(optional)] on_input: Option<Callback<String>>,
     #[prop(optional)] on_change: Option<Callback<String>>,
     #[prop(optional, into)] name: String,
     #[prop(optional, into)] autocomplete: String,
     #[prop(optional)] required: bool,
+    #[prop(optional, into)] id: String,
 ) -> impl IntoView {
     let reveal = RwSignal::new(false);
     let has_label = !label.is_empty();
-    let has_error = !error.is_empty();
-    let id = field_id();
+    let has_error = move || error.with(|e| !e.is_empty());
+    let id = control_id(id);
     let err_id = format!("{id}-error");
-    let mut class = String::from("cl-input");
-    if has_error {
-        class.push_str(" cl-input--error");
-    }
+    let described = err_id.clone();
+    let class = "cl-input";
     view! {
         <div class="cl-field">
             {has_label.then(|| view! {
@@ -906,14 +1014,15 @@ pub fn PasswordInput(
             <div class="cl-input-wrap">
                 <input
                     class=class
+                    class:cl-input--error=has_error
                     id=id
                     type=move || if reveal.get() { "text" } else { "password" }
                     placeholder=attr(placeholder)
                     name=attr(name)
                     autocomplete=attr(autocomplete)
                     required=required
-                    aria-invalid=has_error.then_some("true")
-                    aria-describedby=has_error.then(|| err_id.clone())
+                    aria-invalid=move || has_error().then_some("true")
+                    aria-describedby=move || has_error().then(|| described.clone())
                     disabled=move || disabled.get()
                     prop:value=move || value.get()
                     on:input=move |e| {
@@ -951,16 +1060,29 @@ pub fn PasswordInput(
                     }}
                 </button>
             </div>
-            {has_error.then(|| view! { <span class="cl-field__error" id=err_id>{error}</span> })}
+            {field_error(error, err_id)}
         </div>
     }
 }
 
 /// Equal-width responsive grid (Mantine `SimpleGrid`).
+///
+/// - `cols` (default 2): the columns on a wide screen. Below 768px the grid
+///   has at most 2 columns, and below 480px one.
+/// - `fixed`: keep `cols` at every width (no collapse).
 #[component]
-pub fn SimpleGrid(#[prop(default = 2)] cols: usize, children: Children) -> impl IntoView {
-    let style = format!("grid-template-columns:repeat({cols},minmax(0,1fr));");
-    view! { <div class="cl-simple-grid" style=style>{children()}</div> }
+pub fn SimpleGrid(
+    #[prop(default = 2)] cols: usize,
+    #[prop(optional)] fixed: bool,
+    children: Children,
+) -> impl IntoView {
+    let cols = cols.max(1);
+    let class = if fixed {
+        "cl-simple-grid cl-simple-grid--fixed"
+    } else {
+        "cl-simple-grid"
+    };
+    view! { <div class=class style=format!("--cl-cols:{cols};")>{children()}</div> }
 }
 
 /// 12-column grid container (Mantine `Grid`). Pair with `GridCol`.
