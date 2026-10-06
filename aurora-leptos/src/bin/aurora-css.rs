@@ -17,10 +17,21 @@
 //! (`cargo install colliery-io-aurora --locked --no-default-features
 //! --features bin`) or adds a small helper crate that calls
 //! `aurora_leptos::write_css` (see the workspace README).
+//!
+//! `--hyper` also writes `dir/hyper.css`, the opt-in hyper theme.
 fn main() {
-    let dir = std::env::args()
-        .nth(1)
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let hyper = args.iter().any(|a| a == "--hyper");
+    let dir = args
+        .iter()
+        .find(|a| !a.starts_with("--"))
+        .cloned()
         .unwrap_or_else(|| "style".to_string());
-    let path = aurora_leptos::write_css(std::path::Path::new(&dir)).expect("write aurora.css");
+    let dir = std::path::Path::new(&dir);
+    let path = aurora_leptos::write_css(dir).expect("write aurora.css");
     eprintln!("aurora-css: wrote {}", path.display());
+    if hyper {
+        let path = aurora_leptos::write_hyper_css(dir).expect("write hyper.css");
+        eprintln!("aurora-css: wrote {}", path.display());
+    }
 }

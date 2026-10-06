@@ -58,7 +58,10 @@ fn item_01_bad_colours_subtle_and_default_buttons() {
         );
     }
     let h = html! { <Button variant="subtle" bad=true>"Delete"</Button> };
-    assert!(h.contains("cl-btn--subtle") && h.contains("cl-btn--bad"), "{h}");
+    assert!(
+        h.contains("cl-btn--subtle") && h.contains("cl-btn--bad"),
+        "{h}"
+    );
 }
 
 // ---- 2. the placeholder of a password input -------------------------------
@@ -75,15 +78,26 @@ fn item_02_password_placeholder_has_normal_spacing() {
 fn item_03_stat_tile_text_value_truncates() {
     assert!(rule(".cl-stat__value--text").contains("font-size: var(--fs-xl)"));
     let t = rule(".cl-stat__value--text .cl-stat__text");
-    for decl in ["min-width: 0", "overflow: hidden", "text-overflow: ellipsis", "white-space: nowrap"] {
+    for decl in [
+        "min-width: 0",
+        "overflow: hidden",
+        "text-overflow: ellipsis",
+        "white-space: nowrap",
+    ] {
         assert!(t.contains(decl), "{decl}");
     }
 
     let h = html! { <StatTile label="Last deploy" value="just now" text=true /> };
     assert!(h.contains("cl-stat__value cl-stat__value--text"), "{h}");
-    assert!(h.contains(r#"class="cl-stat__text""#) && h.contains(r#"title="just now""#), "{h}");
+    assert!(
+        h.contains(r#"class="cl-stat__text""#) && h.contains(r#"title="just now""#),
+        "{h}"
+    );
 
     // A figure keeps the big mono form.
     let h = html! { <StatTile label="Agents" value="3" /> };
-    assert!(!h.contains("cl-stat__value--text") && h.contains(r#"class="cl-tnum""#), "{h}");
+    assert!(
+        !h.contains("cl-stat__value--text") && h.contains(r#"class="cl-tnum""#),
+        "{h}"
+    );
 }

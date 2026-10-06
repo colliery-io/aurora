@@ -1,0 +1,127 @@
+/*
+ *  Copyright 2025-2026 Colliery Software
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Aurora hyper theme — neon hues on a dark base. OPT IN.
+ *
+ *  This file is not in AURORA_CSS. A product that wants hyper loads it after
+ *  the Aurora stylesheet (HYPER_CSS, write_hyper_css, `aurora-css --hyper`, or
+ *  `AuroraStyles hyper=true`) and shows it with `ThemeToggle hyper=true` or
+ *  `set_theme(Theme::Hyper)`:
+ *
+ *    <html data-theme="hyper">   color-scheme: dark  -> hyper
+ *
+ *  With no hyper stylesheet, `data-theme="hyper"` matches no rule and the page
+ *  follows the OS, as with no `data-theme`.
+ *
+ *  Like tokens.css, this file may hold raw colours (tests/no_raw_colours.rs).
+ *  It sets each token that tokens.css gives as `light-dark()`; the tints
+ *  (`--x-bg`) and the gradients are built from the hues, so they follow.
+ *  tests/contrast.rs checks hyper with the same AA rules as light and dark.
+ *
+ *  The hues keep their roles: ice cyan, teal aqua, violet ultraviolet, gold
+ *  amber, ok acid green, bad hot red, skip magenta. Text on a solid neon fill
+ *  is near-black (--on-status).
+ */
+
+/* Present whenever this file is loaded: `theme::hyper_available()` reads it. */
+:root { --aurora-hyper-loaded: 1; }
+
+:root[data-theme="hyper"] {
+  color-scheme: dark;
+
+  /* ----- Surfaces: blue-violet black ----- */
+  --bg: #07070d;
+  --sidebar: #0a0a14;
+  --panel: #0f0f1c;
+  --panel-2: #0c0c17;
+  --inset: #050509;
+  --field: #050509;
+  --control: #161628;
+  --control-hover: #1d1d34;
+  --border: #262642;
+  --border-soft: #1d1d34;
+  --border-fainter: #141424;
+  --border-control: #6c69a6;
+
+  /* ----- Text ----- */
+  --fg: #ecebff;
+  --fg-bright: #ffffff;
+  --fg-2: #cac8f0;
+  --fg-strong: #e0deff;
+  --muted: #9d9acb;
+  --faint: #918ec0;
+  --fainter: #6a679e;
+
+  /* ----- Hues: neon ----- */
+  --ice: #00e5ff;
+  --teal: #00ffc8;
+  --violet: #b68cff;
+  --gold: #ffc400;
+  --ok: #3dff7a;
+  --bad: #ff3d6e;
+  --skip: #ff52d9;
+
+  /* ----- Status text (on the -bg fill) ----- */
+  --ice-fg: #00e5ff;
+  --teal-fg: #00ffc8;
+  --violet-fg: #b68cff;
+  --gold-fg: #ffc400;
+  --ok-fg: #3dff7a;
+  --bad-fg: #ff3d6e;
+  --skip-fg: #ff52d9;
+  --muted-fg: #9d9acb;
+
+  /* Text on a solid neon fill. */
+  --on-status: #05050a;
+  --on-accent: #05050a;
+  --bad-muted: #e08aa2;
+
+  /* ----- Graph and brand ----- */
+  --edge: #6c69a6;
+  --brand-stroke: #5cf0ff;
+  --ice-3: #5cf0ff;
+  --ice-5: #00c8e0;
+  --ice-7: #00a8bf;
+
+  /* ----- Overlays, shadows, scrollbars ----- */
+  --tooltip-bg: #03030a;
+  --tooltip-fg: #ecebff;
+  --tooltip-border: #3a3a66;
+  --scrim: rgba(3, 3, 10, 0.72);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.7);
+  --scrollbar: #2c2c4c;
+
+  /* The glow: a soft halo in the colour of the element. */
+  --hyper-glow: 0 0 14px -2px;
+}
+
+/* ----- Glow on accents. None when the OS asks for more contrast. ----- */
+@media not (prefers-contrast: more) {
+  :root[data-theme="hyper"] .cl-btn--filled {
+    box-shadow: var(--hyper-glow) color-mix(in srgb, var(--ice) 65%, transparent);
+  }
+  :root[data-theme="hyper"] .cl-btn--bad.cl-btn--filled {
+    box-shadow: var(--hyper-glow) color-mix(in srgb, var(--bad) 65%, transparent);
+  }
+  :root[data-theme="hyper"] .cl-btn:focus-visible,
+  :root[data-theme="hyper"] .cl-action-icon:focus-visible,
+  :root[data-theme="hyper"] .cl-switch:focus-visible {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--ice) 70%, transparent);
+  }
+  :root[data-theme="hyper"] .cl-input:focus {
+    box-shadow: 0 0 10px -2px color-mix(in srgb, var(--ice) 70%, transparent);
+  }
+  :root[data-theme="hyper"] .cl-navlink--active,
+  :root[data-theme="hyper"] .cl-navlink[aria-current="page"] {
+    box-shadow:
+      inset 2px 0 0 var(--ice),
+      inset 10px 0 14px -10px color-mix(in srgb, var(--ice) 80%, transparent);
+  }
+  /* A dot has its colour inline as `color` (and `background`). */
+  :root[data-theme="hyper"] .cl-dot { filter: drop-shadow(0 0 4px currentColor); }
+  :root[data-theme="hyper"] .cl-live--live .cl-live__dot { filter: drop-shadow(0 0 4px var(--ok)); }
+  :root[data-theme="hyper"] .cl-dag__edge { filter: drop-shadow(0 0 2px var(--hue, var(--edge))); }
+}

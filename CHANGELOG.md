@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0
+
+The opt-in **hyper** theme (AURORA-T-0010): neon hues on a dark base, with a
+soft glow on accents. A product gets it only if it asks: see "Hyper theme" in
+the README.
+
+- `style/hyper.css` and the const `HYPER_CSS`. It is not in `AURORA_CSS`.
+  `write_hyper_css(dir)`, `aurora-css <dir> --hyper` and
+  `AuroraStyles hyper=true` load it.
+- `Theme::Hyper` (`"hyper"`). `ThemeToggle hyper=true` adds a Hyper button;
+  with no prop the toggle is Light / Dark / System as before.
+  `toggle_choices(hyper)` gives the buttons, `Theme::is_dark_base()` says if a
+  theme has a dark base, and `hyper_available()` says if the hyper stylesheet
+  is on the page. With no hyper stylesheet, a stored `"hyper"` is `System`.
+- `THEME_INIT_SCRIPT` accepts `"hyper"`. **Copy the new script** into the
+  `<head>` of your `index.html` (the README has it); the old one still works
+  for light and dark.
+- `Dot` sets its colour as `color` too, for the glow.
+- The contrast test checks hyper with the same AA rules as light and dark.
+
+**Breaking:** `Theme` has a new variant. A `match` on `Theme` with no `_` arm
+needs a `Theme::Hyper` arm.
+
 ## 0.4.2
 
 A patch release with the repairs of AURORA-T-0008: the defects that the

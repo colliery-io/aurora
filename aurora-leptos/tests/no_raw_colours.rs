@@ -16,6 +16,8 @@ use std::path::{Path, PathBuf};
 const SKIP_FILES: &[&str] = &[
     // The token definitions: the one place that holds the raw values.
     "style/tokens.css",
+    // The opt-in hyper theme: its own token values (checked by contrast.rs).
+    "style/hyper.css",
     // This test: it names the patterns it looks for.
     "tests/no_raw_colours.rs",
     // The contrast test parses the token values; it holds no colour itself,

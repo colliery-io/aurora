@@ -39,7 +39,7 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
                      #   Pagination, RelativeTime, LiveIndicator
     icons.rs         #   a small SVG icon set in currentColor
     tokens.rs        #   semantic tokens (CSS variables) + error classification
-    theme.rs         #   light / dark / system: ThemeToggle, set_theme, init script
+    theme.rs         #   light / dark / hyper / system: ThemeToggle, set_theme, init script
     widgets.rs       #   Meter, Banner, HealthPill, BuildStatusBadge
     graph.rs         #   the graph: Dag, DagLegend, and the old Graph wrapper
     graph_layout.rs  #   the graph data model and its pure layout (unit-tested)
@@ -139,7 +139,7 @@ leptos for the host.
   version that the app uses:
   ```toml
   # Trunk.toml — install the helper once:
-  #   cargo install colliery-io-aurora --locked --version 0.4.2 --no-default-features --features bin
+  #   cargo install colliery-io-aurora --locked --version 0.5.0 --no-default-features --features bin
   [[hooks]]
   stage = "pre_build"
   command = "aurora-css"
@@ -206,9 +206,37 @@ storage before the first paint. Copy it from `leptos-gallery/index.html`:
 
 ```html
 <meta name="color-scheme" content="light dark" />
-<script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"){var d=document.documentElement;d.setAttribute("data-theme",t);d.style.colorScheme=t;}}catch(e){}})();</script>
+<script>(function(){try{var t=localStorage.getItem("aurora-theme");if(t==="light"||t==="dark"||t==="hyper"){var d=document.documentElement;d.setAttribute("data-theme",t);if(t!=="hyper")d.style.colorScheme=t;}}catch(e){}})();</script>
 <link data-trunk rel="css" href="style/aurora.css" />
 ```
+
+## Hyper theme (opt in)
+
+Hyper is a third theme: neon hues on a dark base, with a soft glow on accents
+(filled buttons, focus, the active nav link, dots, graph edges). The hues keep
+their roles (ice is cyan, ok is acid green, bad is hot red, ...), so a status
+means the same in each theme. It passes the same contrast checks as light and
+dark, and the glow goes away when the OS asks for more contrast
+(`prefers-contrast: more`).
+
+A product gets no hyper unless it asks for it. To opt in:
+
+1. Load the hyper stylesheet after `aurora.css`. It is not in `AURORA_CSS`.
+   Use `aurora-css style --hyper` (writes `style/hyper.css` too),
+   `aurora_leptos::write_hyper_css(dir)`, the `HYPER_CSS` const, or
+   `<AuroraStyles hyper=true />`.
+
+   ```html
+   <link data-trunk rel="css" href="style/aurora.css" />
+   <link data-trunk rel="css" href="style/hyper.css" />
+   ```
+
+2. Offer it: `<ThemeToggle hyper=true />` shows Light / Dark / Hyper / System.
+   Or call `set_theme(Theme::Hyper)`.
+
+`<html data-theme="hyper">` shows it. With no hyper stylesheet on the page,
+`data-theme="hyper"` matches no rule, the page follows the OS, and
+`current_theme()` says `System`. `ThemeContext::is_dark()` is true in hyper.
 
 ## Colour tokens
 

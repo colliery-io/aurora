@@ -12,5 +12,6 @@ command_arguments = [
   "--bin", "aurora-css",
   # Separate target dir so generating the CSS can't churn trunk's wasm build.
   "--target-dir", "target/_aurora_css",
-  "--", "style",
+  # --hyper: also style/hyper.css, the opt-in hyper theme, which the gallery shows.
+  "--", "style", "--hyper",
 ]

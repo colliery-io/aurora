@@ -198,7 +198,7 @@ checksum = "2550f75b8cfac212855f6b1885455df8eaee8fe8e246b647d69146142e016084"
 
 [[package]]
 name = "colliery-io-aurora"
-version = "0.4.2"
+version = "0.5.0"
 dependencies = [
  "any_spawner",
  "hlin-view",

@@ -215,12 +215,12 @@ fn App() -> impl IntoView {
                     <Group gap="sm">
                         <StatusBadge status="running" />
                         <HealthPill label="live" color=token::OK tip="Connected and receiving data normally." />
-                        <ThemeToggle />
+                        <ThemeToggle hyper=true />
                     </Group>
                 }.into_any())
             />
             <p class="gallery__lead">
-                "The complete Aurora design system, ported to Leptos 0.8 — every Mantine primitive in use plus all Aurora components, shipped as the aurora-leptos crate. Light and dark themes; the toggle above chooses light, dark or the system setting."
+                "The complete Aurora design system, ported to Leptos 0.8 — every Mantine primitive in use plus all Aurora components, shipped as the aurora-leptos crate. Light and dark themes, and the opt-in hyper theme (neon on dark); the toggle above chooses light, dark, hyper or the system setting."
             </p>
 
             // ---- Theme: colour tokens ----
