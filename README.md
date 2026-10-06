@@ -138,7 +138,7 @@ leptos for the host.
   version that the app uses:
   ```toml
   # Trunk.toml — install the helper once:
-  #   cargo install colliery-io-aurora --locked --version 0.4.1 --no-default-features --features bin
+  #   cargo install colliery-io-aurora --locked --version 0.4.2 --no-default-features --features bin
   [[hooks]]
   stage = "pre_build"
   command = "aurora-css"

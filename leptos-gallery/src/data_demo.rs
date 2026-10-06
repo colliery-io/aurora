@@ -182,6 +182,9 @@ pub fn DataSections() -> impl IntoView {
                     spark=Box::new(move || view! { <Sparkline values=throughput.clone() fluid=true label="Throughput, last hour" /> }.into_any()) />
                 <StatTile label="Failed runs" value="7" sub="last 24h" color=token::BAD
                     spark=Box::new(move || view! { <Sparkline values=errors.clone() bars=true fluid=true label="Failed runs per hour" /> }.into_any()) />
+                // text=true: a value that is a word, not a figure.
+                <StatTile label="Last deploy" value="just now" text=true sub="by release-bot" />
+                <StatTile label="Busiest graph" value="nightly-warehouse-reconciliation-and-backfill" text=true sub="412 runs today" />
             </div>
             <Group gap="sm" wrap=true>
                 <span class="gallery__label">"line"</span><Sparkline values=lat2 color=token::ICE />

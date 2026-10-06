@@ -574,10 +574,14 @@ pub fn LiveIndicator(
 /// - `delta` (optional): a change, such as `"+12%"`, in `delta_color`
 ///   (a hue token; default muted).
 /// - `sub` (optional): a short line such as `"last 24h"`.
+/// - `text`: the value is text (a name, `"just now"`), not a figure. It is
+///   set smaller, on one line, and a long value ends in an ellipsis. The full
+///   value is the `title` of the value.
 #[component]
 pub fn StatTile(
     #[prop(into)] label: String,
     #[prop(into)] value: Signal<String>,
+    #[prop(optional)] text: bool,
     #[prop(optional, into)] unit: String,
     #[prop(optional, into)] sub: MaybeProp<String>,
     #[prop(optional, into)] delta: MaybeProp<String>,
@@ -598,8 +602,13 @@ pub fn StatTile(
     view! {
         <div class="cl-stat" style=style>
             <div class="cl-stat__label">{label}</div>
-            <div class="cl-stat__value">
-                <span class="cl-tnum">{move || value.get()}</span>
+            <div class=if text { "cl-stat__value cl-stat__value--text" } else { "cl-stat__value" }>
+                {if text {
+                    view! { <span class="cl-stat__text" title=move || value.get()>{move || value.get()}</span> }
+                        .into_any()
+                } else {
+                    view! { <span class="cl-tnum">{move || value.get()}</span> }.into_any()
+                }}
                 {has_unit.then(|| view! { <span class="cl-stat__unit">{unit}</span> })}
             </div>
             {move || {
