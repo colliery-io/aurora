@@ -55,7 +55,9 @@
 //! - **Linked stylesheet (no flash):** materialise it as a file and `<link>` it.
 //!   With `cargo-leptos` (builds before bundling), call [`write_css`] from
 //!   `build.rs`. With `trunk` (validates assets before building), generate it in a
-//!   `pre_build` hook via the leptos-free `aurora-css` bin.
+//!   `pre_build` hook: a small helper crate in the product's workspace that calls
+//!   [`write_css`], or the installed leptos-free `aurora-css` bin (the README has
+//!   both).
 //!
 //! ```ignore
 //! use aurora_leptos::{components::*, tokens::token};

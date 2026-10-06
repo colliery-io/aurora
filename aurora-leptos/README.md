@@ -79,11 +79,14 @@ file at build time. `write_css` / the `aurora-css` bin are leptos-free
    the CSS into the wasm. Possible first-paint flash.
 2. **Linked stylesheet, no flash:**
    - **trunk** validates assets before building, so `build.rs` is too late — emit
-     the file in a `pre_build` hook running the `aurora-css` helper, then
-     `<link data-trunk rel="css" href="style/aurora.css">`. (Install it with
-     `cargo install colliery-io-aurora --no-default-features --features bin`; in
-     a workspace, `cargo run -p colliery-io-aurora … --bin aurora-css`. See
-     `../leptos-gallery/Trunk.toml`.)
+     the file in a `pre_build` hook, then
+     `<link data-trunk rel="css" href="style/aurora.css">`. Cargo cannot run a
+     binary of a dependency, so the hook runs either a five-line helper crate in
+     your own workspace that calls `write_css` (no install; it shares your
+     `Cargo.lock`), or the installed `aurora-css` bin
+     (`cargo install colliery-io-aurora --locked --version <the app's version>
+     --no-default-features --features bin`). The workspace `../README.md` has
+     both, ready to copy.
    - **cargo-leptos** builds before bundling styles, so calling
      `write_css(Path::new("style"))` from `build.rs` works; point `style-file` at it.
 
