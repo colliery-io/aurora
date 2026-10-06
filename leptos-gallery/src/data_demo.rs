@@ -193,7 +193,7 @@ pub fn DataSections() -> impl IntoView {
         </Section>
 
         // ---------------------------------------------------------------- SegmentedBar
-        <Section id="segbar" title="SegmentedBar · Meter" caption="proportions in one bar (ok / warning / failed, done / active / to do); a part has a tooltip; optional legend">
+        <Section id="segbar" title="SegmentedBar · Meter" caption="proportions in one bar (ok / warning / failed, done / active / to do); a part has a tooltip; optional legend; a Meter for one value, or indeterminate for work of unknown length">
             <div class="gallery__card" id="demo-segbar">
                 <Stack gap="sm">
                     <SegmentedBar label="Fleet health" legend=true segments=vec![
@@ -211,6 +211,10 @@ pub fn DataSections() -> impl IntoView {
                     <Group gap="sm">
                         <div style="width:200px;"><Meter value=72.0 label="Disk used" /></div>
                         <span class="gallery__label">"Meter: one value from 0 to 100"</span>
+                    </Group>
+                    <Group gap="sm">
+                        <div style="width:200px;"><Meter indeterminate=true label="Collecting diagnostics" /></div>
+                        <span class="gallery__label">"Meter indeterminate=true: work of unknown length (still with reduced motion)"</span>
                     </Group>
                 </Stack>
             </div>

@@ -87,7 +87,7 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | The state of a live stream | `LiveIndicator` | `LiveState::{Live, Connecting, Offline}` |
 | Pages of a long list | `Pagination` | `offset`, `limit`, `total`, `page_sizes` |
 | An icon | `IconPlay`, `IconCopy`, ... | `size`, `title` |
-| A freshness / progress bar | `Meter` | `value` 0–100 |
+| A freshness / progress bar | `Meter` | `value` 0–100; `indeterminate` for work of unknown length |
 | Build/CI status | `BuildStatusBadge` | success/building/failed/pending |
 | A data table | `Table` + `TableRow` / `SortHeader` / `TableEmpty` | `fixed`, `widths`, `min_width` |
 | Draw a graph / DAG | `Dag` (+ `DagLegend`) | Aurora does the layout and the interaction; old `Graph` still works |
@@ -140,8 +140,8 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 Key props only — see rustdoc for the full signatures.
 
 ### Layout
-`Box` · `Group{justify,top,wrap,gap}` · `Stack{center,gap}` ·
-`SimpleGrid{cols}` · `Grid` + `GridCol{span}` · `Divider` ·
+`Box` · `Group{justify,top,align,wrap,gap}` · `Stack{center,gap}` ·
+`SimpleGrid{cols,fixed}` · `Grid` + `GridCol{span}` · `Divider` ·
 `Card{href,on_click,title,label,selected}`.
 
 ### Frame
@@ -186,17 +186,19 @@ is a drawer behind a menu button (Escape, the scrim or a link closes it).
 ### Inputs (bind `value`/`checked` to an `RwSignal`)
 `Button{variant,size,bad,disabled,loading,loading_label,button_type,href,title,aria_label,stop_propagation,on_click}` ·
 `ActionIcon{title,on_click}` ·
-`TextInput{label,placeholder,value,error,input_type,disabled,on_input,on_change,name,autocomplete,required,spellcheck,mono}` ·
-`Textarea{…,rows,mono}` · `PasswordInput{…,autocomplete}` ·
-`NumberInput{label,value:RwSignal<f64>,step,min,max,disabled,on_change,name,required,error}` ·
-`Select{label,options,option_pairs,value,placeholder,disabled,on_change,name,required,error}` ·
+`TextInput{label,placeholder,value,error,input_type,disabled,on_input,on_change,name,autocomplete,required,spellcheck,mono,id,aria_label}` ·
+`Textarea{…,rows,mono,id,aria_label}` · `PasswordInput{…,autocomplete,id}` ·
+`NumberInput{label,value:RwSignal<f64>,step,min,max,disabled,on_change,name,required,error,id}` ·
+`Select{label,options,option_pairs,value,placeholder,disabled,on_change,name,required,error,id,aria_label}` ·
 `Switch{checked,label,disabled,on_change}` · `SegmentedControl{options,value}` ·
 `CopyButton{value,icon,link,label,copied_label,on_copy}`.
 
 `disabled` takes a `bool`, a signal or a closure, so it changes with the
-state: `disabled=move || busy.get() || name.get().is_empty()`. An attribute
+state: `disabled=move || busy.get() || name.get().is_empty()`. `error` of an
+input works the same way (`error=move || problem.get()`). An attribute
 with no prop goes on the root element with `attr:`
-(`<Button attr:data-testid="save">`).
+(`<Button attr:data-testid="save">`); on an input, that root is the wrapper
+`<div>`, so use `aria_label` and `id` for the control itself.
 
 ```rust
 let name = RwSignal::new(String::new());
@@ -205,7 +207,7 @@ view! { <TextInput label="Name" value=name placeholder="e.g. nightly" /> }
 
 ### Overlays & feedback
 `Tooltip{label,position,focusable}` · `Modal{open,title,size,footer?,close_on_scrim,locked,on_close}` ·
-`Drawer{…same}` · `ConfirmDialog{open,title,message,impacts,confirm_text,confirm_label,danger,busy,on_confirm,on_cancel}` ·
+`Drawer{…same}` · `ConfirmDialog{open,title,message,notice?,impacts,confirm_text,confirm_label,danger,busy,on_confirm,on_cancel}` ·
 `ToastStack{duration_ms}` + `provide_toaster()` / `use_toaster()` ·
 `Menu{label,trigger?,trigger_class,aria_label,align,up,open}` + `MenuItem{on_click,href,disabled,danger}` + `MenuLabel` + `MenuDivider` ·
 `SecretReveal{secret,label,warning,done_label,on_done}` · `CenterScreen{contained}` + `AuthCard{title,sub,brand?,footer?}` ·
@@ -239,7 +241,7 @@ toaster.toast(ToastKind::Error, "The server did not answer");
 
 ### Status & async states
 `Pill{color}` · `StatusBadge{status}` · `Dot{color,size,glow}` ·
-`Chip{label,count,active,on_click}` · `Loading{label}` · `Empty{message}` ·
+`Chip{label,count,active,on_click}` · `Loading{label}` · `Empty{message,hint,href,link,children?}` ·
 `ErrorState{error:ApiError,on_retry}`.
 
 ```rust
@@ -253,7 +255,7 @@ match resource.get() {
 ```
 
 ### Data-display widgets
-`Meter{value,color,label}` · `Banner{color,icon}` · `HealthPill{label,color,tip}` ·
+`Meter{value,color,label,indeterminate}` · `Banner{color,icon}` · `HealthPill{label,color,tip}` ·
 `BuildStatusBadge{status}`.
 
 ### Data components
@@ -264,8 +266,8 @@ match resource.get() {
 `SectionLabel{label,count,action?,divider,level}` ·
 `CodeBlock{code,max_height,copy,wrap,label}` ·
 `LogView{lines:Vec<LogLine>,max_height,follow,copy,empty,label}` ·
-`FeedList{label}` + `FeedRow{at,time,subject,actor,status,status_color,dot,href,on_click}` ·
-`Pagination{offset,limit,total,page_sizes,prev_label,next_label,on_change}` ·
+`FeedList{label}` + `FeedRow{at,time,subject,actor,status,status_color,dot,href,on_click,keep_time_slot}` ·
+`Pagination{offset,limit,total,page_sizes,prev_label,next_label,on_change,show_range,range_label}` ·
 `RelativeTime{at,iso,fallback}` · `LiveIndicator{state,live_label,connecting_label,offline_label,compact}` ·
 `Table{mono,fixed,widths,min_width,label}` + `TableRow{on_click,selected,label}` +
 `SortHeader{label,key,sort,first_desc,align_right,width}` + `TableEmpty{message,colspan}`.

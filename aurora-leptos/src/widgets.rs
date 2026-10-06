@@ -26,14 +26,38 @@ use crate::tokens::token;
 /// or a signal); `color` defaults to the ok/green token. `label` (optional)
 /// makes it a `role="meter"` with that accessible name.
 ///
+/// `indeterminate`: work of unknown length. A short bar sweeps across (a
+/// still bar when the OS asks for less motion), `value` is not used, and the
+/// bar is a `role="progressbar"` with no value, named by `label` (default
+/// "Loading"). Its colour defaults to the ice/accent token.
+///
 /// For a bar in several parts, use
 /// [`SegmentedBar`](crate::data::SegmentedBar).
 #[component]
 pub fn Meter(
-    #[prop(into)] value: Signal<f64>,
+    #[prop(optional, into)] value: Signal<f64>,
     #[prop(optional, into)] color: String,
     #[prop(optional, into)] label: String,
+    #[prop(optional)] indeterminate: bool,
 ) -> impl IntoView {
+    if indeterminate {
+        let color = if color.is_empty() {
+            token::ICE.to_string()
+        } else {
+            color
+        };
+        let label = if label.is_empty() {
+            "Loading".to_string()
+        } else {
+            label
+        };
+        return view! {
+            <div class="cl-meter cl-meter--indeterminate" role="progressbar" aria-label=label>
+                <div class="cl-meter__fill" style=format!("background:{color};")></div>
+            </div>
+        }
+        .into_any();
+    }
     let color = if color.is_empty() {
         token::OK.to_string()
     } else {
@@ -53,6 +77,7 @@ pub fn Meter(
             <div class="cl-meter__fill" style=move || format!("width:{}%;background:{color};", pct())></div>
         </div>
     }
+    .into_any()
 }
 
 /// A tinted callout banner. `color` sets the accent (defaults to gold/warn);

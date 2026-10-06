@@ -210,6 +210,11 @@ body {
 .cl-pulse {
   animation: cl-pulse 1.4s ease-in-out infinite;
 }
+/* No pulse when the OS asks for less motion, wherever .cl-pulse is used
+   (AURORA-T-0007 item 5). */
+@media (prefers-reduced-motion: reduce) {
+  .cl-pulse { animation: none; }
+}
 
 /* Loader spin. */
 @keyframes cl-spin {

@@ -305,6 +305,11 @@ fn trap_tab(root: &web_sys::Element, ev: &web_sys::KeyboardEvent) {
 }
 
 fn active_html_element() -> Option<web_sys::HtmlElement> {
+    // Outside a browser (a server render, a native test) there is no focus
+    // to restore, and the DOM calls would panic.
+    if !cfg!(target_arch = "wasm32") {
+        return None;
+    }
     document()
         .active_element()
         .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok())
@@ -629,7 +634,7 @@ struct DialogProps {
     /// "modal" or "drawer": the CSS block name.
     kind: &'static str,
     open: RwSignal<bool>,
-    title: String,
+    title: Signal<String>,
     size: String,
     children: ChildrenFn,
     footer: Option<ChildrenFn>,
@@ -690,8 +695,6 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
                     focus_initial(&el);
                 }
             });
-            let title = title.clone();
-            let aria_title = title.clone();
             let children = children.clone();
             let footer = footer.clone();
             view! {
@@ -737,11 +740,11 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
                         class=format!("cl-{kind} cl-{kind}--{size}")
                         role="dialog"
                         aria-modal="true"
-                        aria-label=aria_title
+                        aria-label=move || title.get()
                         tabindex="-1"
                     >
                         <div class="cl-modal__header">
-                            <span class="cl-modal__title">{title}</span>
+                            <span class="cl-modal__title">{move || title.get()}</span>
                             <button
                                 type="button"
                                 class="cl-modal__close"
@@ -764,6 +767,8 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
 /// A dialog over the page, open while `open` is true.
 ///
 /// - `title`: shown in the header; also the accessible name of the dialog.
+///   A `String`, a `&str`, a signal or a closure, so it can name the item
+///   ("Delete fx-demo?") and change while the dialog is open.
 /// - `size`: `"sm"` (400px), `"md"` (520px, default), `"lg"` (760px) or
 ///   `"xl"` (1060px). On a small screen the dialog is the screen width less a
 ///   16px margin.
@@ -781,7 +786,7 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
 #[component]
 pub fn Modal(
     open: RwSignal<bool>,
-    #[prop(into)] title: String,
+    #[prop(into)] title: Signal<String>,
     #[prop(optional, into)] size: String,
     #[prop(optional)] footer: Option<ChildrenFn>,
     #[prop(default = true)] close_on_scrim: bool,
@@ -810,7 +815,7 @@ pub fn Modal(
 #[component]
 pub fn Drawer(
     open: RwSignal<bool>,
-    #[prop(into)] title: String,
+    #[prop(into)] title: Signal<String>,
     #[prop(optional, into)] size: String,
     #[prop(optional)] footer: Option<ChildrenFn>,
     #[prop(default = true)] close_on_scrim: bool,
@@ -837,7 +842,8 @@ pub fn Drawer(
 
 /// A confirmation for an action that destroys or changes data.
 ///
-/// - `title`: the question ("Delete workflow?").
+/// - `title`: the question ("Delete workflow?"). A `String`, a `&str`, a
+///   signal or a closure (`title=move || format!("Delete {}?", name.get())`).
 /// - `message` (optional): what happens, in one or two sentences.
 /// - `impacts` (optional): a list of what the action also changes (for
 ///   example the items an archive cascades to), under `impacts_label`.
@@ -851,11 +857,13 @@ pub fn Drawer(
 ///   `open` to false when the work is done (or at once).
 /// - `on_cancel` (optional): runs on Cancel, Escape, the scrim or ×. The
 ///   dialog closes itself.
+/// - `notice` (optional): content between the message and the impacts list,
+///   such as a warning that must be read before the list.
 /// - children (optional): more content under the list (an error, a preview).
 #[component]
 pub fn ConfirmDialog(
     open: RwSignal<bool>,
-    #[prop(into)] title: String,
+    #[prop(into)] title: Signal<String>,
     #[prop(optional, into)] message: String,
     #[prop(optional, into)] impacts: Signal<Vec<String>>,
     #[prop(default = "This also changes:".to_string(), into)] impacts_label: String,
@@ -867,6 +875,7 @@ pub fn ConfirmDialog(
     #[prop(default = "sm".to_string(), into)] size: String,
     on_confirm: Callback<()>,
     #[prop(optional)] on_cancel: Option<Callback<()>>,
+    #[prop(optional)] notice: Option<ChildrenFn>,
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
     let typed = RwSignal::new(String::new());
@@ -900,14 +909,17 @@ pub fn ConfirmDialog(
         let message = message.clone();
         let impacts_label = impacts_label.clone();
         let children = children.clone();
+        let notice = notice.clone();
         std::sync::Arc::new(move || {
             let input_id = next_id("confirm");
             let message = message.clone();
             let impacts_label = impacts_label.clone();
             let children = children.clone();
+            let notice = notice.clone();
             view! {
                 <div class="cl-confirm">
                     {(!message.is_empty()).then(|| view! { <p class="cl-confirm__message">{message}</p> })}
+                    {notice.map(|n| view! { <div class="cl-confirm__notice">{n()}</div> })}
                     {move || {
                         let list = impacts.get();
                         (!list.is_empty()).then(|| view! {

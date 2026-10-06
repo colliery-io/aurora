@@ -91,21 +91,68 @@ leptos for the host.
 
 - **Linked stylesheet, no flash — trunk.** A `<head>` `<link>` is render-blocking
   (no flash), but trunk validates assets *before* building, so a `build.rs` can't
-  emit the file in time. Generate it in a **`pre_build` hook** instead:
+  emit the file in time. Generate it in a **`pre_build` hook** instead. The hook
+  needs a program that calls `aurora_leptos::write_css`. Cargo cannot run a
+  binary of a dependency (`cargo run -p colliery-io-aurora` works only in this
+  repository's workspace), so pick one of the two ways below.
+
+  *A small helper crate in your workspace (no install; recommended).* It is
+  leptos-free, and it shares your `Cargo.lock`, so the stylesheet always comes
+  from the same Aurora version as the components in your wasm:
+  ```toml
+  # tools/aurora-css/Cargo.toml — add "tools/aurora-css" to [workspace] members
+  [package]
+  name = "aurora-css"
+  version = "0.0.0"
+  edition = "2021"
+  publish = false
+
+  [dependencies]
+  colliery-io-aurora = { version = "0.4", default-features = false }
+  ```
+  ```rust
+  // tools/aurora-css/src/main.rs
+  fn main() {
+      let dir = std::env::args().nth(1).unwrap_or_else(|| "style".into());
+      let path = aurora_leptos::write_css(std::path::Path::new(&dir)).expect("write aurora.css");
+      eprintln!("aurora-css: wrote {}", path.display());
+  }
+  ```
+  ```toml
+  # Trunk.toml
+  [[hooks]]
+  stage = "pre_build"
+  command = "cargo"
+  command_arguments = [
+    "run", "-q", "-p", "aurora-css",
+    # A separate target dir, so this step does not rebuild trunk's wasm.
+    "--target-dir", "target/_aurora_css",
+    "--", "style",                   # writes style/aurora.css
+  ]
+  ```
+  (A product that is not a Cargo workspace: give the helper crate its own
+  `[workspace]` table and run it with `--manifest-path tools/aurora-css/Cargo.toml`;
+  pin the same Aurora version as the app.)
+
+  *Or the published binary.* Install it once on each machine and in CI, at the
+  version that the app uses:
   ```toml
   # Trunk.toml — install the helper once:
-  #   cargo install colliery-io-aurora --no-default-features --features bin
+  #   cargo install colliery-io-aurora --locked --version 0.4.1 --no-default-features --features bin
   [[hooks]]
   stage = "pre_build"
   command = "aurora-css"
   command_arguments = ["style"]      # writes style/aurora.css
   ```
+
+  Then link the file, with `THEME_INIT_SCRIPT` before it (see below), and drop
+  `<AuroraStyles/>`:
   ```html
   <link data-trunk rel="css" href="style/aurora.css" />
   ```
-  (In a workspace that *contains* the crate, skip the install and run it via
-  `cargo run -p colliery-io-aurora … --bin aurora-css` — see
-  `leptos-gallery/Trunk.toml`, which dogfoods exactly this.)
+  Add `style/aurora.css` to `.gitignore`: it is generated. (This repository's
+  gallery runs the bin of the workspace member directly — see
+  `leptos-gallery/Trunk.toml`.)
 
 - **Linked stylesheet — cargo-leptos.** It builds the crate before processing
   styles, so `aurora_leptos::write_css(...)` from a `build.rs` works there; point

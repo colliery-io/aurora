@@ -355,10 +355,20 @@ fn App() -> impl IntoView {
             </Modal>
 
             // ---- States ----
-            <Section id="states" title="Loading · Empty · ErrorState" caption="every async view uses these — no blank screens, errors render by classified kind">
+            <Section id="states" title="Loading · Empty · ErrorState" caption="every async view uses these — no blank screens, errors render by classified kind; Empty can say the next step (hint, link, or an action)">
                 <Group top=true wrap=true>
                     <div class="gallery__card" style="flex:1;min-width:240px;"><Loading /></div>
                     <div class="gallery__card" style="flex:1;min-width:240px;"><Empty message="No executions in the last 24 hours." /></div>
+                </Group>
+                <Group top=true wrap=true>
+                    <div class="gallery__card" style="flex:1;min-width:240px;">
+                        <Empty message="No agents yet." hint="Install an agent on a cluster to see it here." href="#states" link="Read how" />
+                    </div>
+                    <div class="gallery__card" style="flex:1;min-width:240px;">
+                        <Empty message="No webhooks." hint="A webhook sends events to your service.">
+                            <Button size="xs">"New webhook"</Button>
+                        </Empty>
+                    </div>
                 </Group>
                 <Group top=true wrap=true>
                     <div style="flex:1;min-width:280px;">

@@ -39,6 +39,9 @@
 .cl-group--start   { justify-content: flex-start; }
 .cl-group--end     { justify-content: flex-end; }
 .cl-group--top     { align-items: flex-start; }
+.cl-group--bottom  { align-items: flex-end; }
+.cl-group--baseline { align-items: baseline; }
+.cl-group--stretch { align-items: stretch; }
 .cl-group--wrap    { flex-wrap: wrap; }
 .cl-group--gap-xs  { gap: 6px; }
 .cl-group--gap-sm  { gap: var(--space-sm); }
@@ -191,6 +194,9 @@
 .cl-input:focus { border-color: var(--ice); }
 .cl-input:disabled { opacity: 0.5; cursor: not-allowed; }
 .cl-input--error { border-color: var(--bad); }
+/* `mono` on a field: `.cl-mono` comes before `.cl-input` in this file, with
+   the same weight, so the field needs its own rule (AURORA-T-0007 item 1). */
+.cl-input.cl-mono { font-family: var(--font-mono); font-feature-settings: "tnum"; }
 textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: vertical; }
 /* Masked text uses the browser's bullet glyph; render it from a system font
    (IBM Plex's loaded subset omits it, which shows as empty boxes). */
@@ -696,6 +702,10 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   justify-content: center;
   min-height: 160px;
 }
+/* Empty with a next step: the message, the hint and the actions in a column. */
+.cl-empty { flex-direction: column; gap: var(--space-xs); padding: var(--space-xl) var(--space-md); box-sizing: border-box; text-align: center; }
+.cl-empty__next { margin: 0; max-width: 52ch; font-size: var(--fs-xs); line-height: 1.5; color: var(--muted); }
+.cl-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-sm); margin-top: var(--space-xs); }
 .cl-loader {
   width: 32px;
   height: 32px;
@@ -713,8 +723,19 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
 .cl-list { margin: 0; padding-left: 20px; color: var(--fg-2); font-size: var(--fs-sm); }
 .cl-list li { margin: 3px 0; }
 
-/* SimpleGrid / Grid (utility wrappers; column counts set inline) */
-.cl-simple-grid { display: grid; gap: var(--space-md); }
+/* SimpleGrid / Grid. SimpleGrid takes its count of columns from --cl-cols
+   (set inline), and collapses on a small screen (AURORA-T-0007 item 3). */
+.cl-simple-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(var(--cl-cols, 2), minmax(0, 1fr));
+}
+@media (max-width: 768px) {
+  .cl-simple-grid:not(.cl-simple-grid--fixed) { grid-template-columns: repeat(min(var(--cl-cols, 2), 2), minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .cl-simple-grid:not(.cl-simple-grid--fixed) { grid-template-columns: minmax(0, 1fr); }
+}
 .cl-grid { display: flex; flex-wrap: wrap; margin: calc(-1 * var(--space-sm)); }
 .cl-grid__col { padding: var(--space-sm); box-sizing: border-box; }
 
@@ -895,6 +916,18 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   border-right: 1px solid var(--border);
 }
 .cl-appshell__scrim { display: none; }
+/* The header is sticky: keep an anchor target or a scrollIntoView target
+   out from under it (AURORA-T-0007 item 13). The header is 52px high; the
+   rest is a little air. */
+html:has(.cl-appshell:not(.cl-appshell--contained):not(.cl-appshell--no-header)) {
+  scroll-padding-top: calc(52px + var(--space-sm));
+}
+@media (max-width: 768px) {
+  /* Below 768px the header shows even with no-header (it holds the menu). */
+  html:has(.cl-appshell:not(.cl-appshell--contained)) {
+    scroll-padding-top: calc(52px + var(--space-sm));
+  }
+}
 .cl-appshell__main { grid-area: main; min-width: 0; padding: 22px 28px; }
 
 .cl-appshell--contained {
@@ -1151,6 +1184,22 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
 /* Meter — freshness/progress bar (fill width + color set inline) */
 .cl-meter { height: 6px; background: var(--inset); border-radius: 3px; }
 .cl-meter__fill { height: 6px; border-radius: 3px; }
+/* Indeterminate: work of unknown length. A short bar sweeps across. */
+.cl-meter--indeterminate { position: relative; overflow: hidden; }
+.cl-meter--indeterminate .cl-meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  animation: cl-sweep 1.1s ease-in-out infinite;
+}
+@keyframes cl-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(340%); }
+}
+/* With less motion, a still bar at half opacity says "working". */
+@media (prefers-reduced-motion: reduce) {
+  .cl-meter--indeterminate .cl-meter__fill { animation: none; width: 100%; opacity: 0.5; }
+}
 
 /* Banner — tinted callout (accent via --banner-color) */
 .cl-banner {
@@ -1203,7 +1252,10 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   overflow-wrap: anywhere;
 }
 .cl-stat__unit { font-size: 12px; font-weight: 500; color: var(--muted); }
-.cl-stat__foot { display: flex; flex-wrap: wrap; gap: 4px 10px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.cl-stat__foot { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+/* A long sub line or delta wraps inside the tile, even a long word
+   (AURORA-T-0007 item 7). */
+.cl-stat__sub, .cl-stat__delta { min-width: 0; overflow-wrap: anywhere; }
 .cl-stat__delta { color: var(--muted); font-weight: 600; }
 .cl-stat__spark { margin-top: auto; padding-top: 6px; color: var(--stat-color, var(--ice)); }
 
@@ -1361,12 +1413,14 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   .cl-feed__row { flex-wrap: wrap; row-gap: 3px; }
   .cl-feed__subject { flex: 1; max-width: none; }
   .cl-feed__text { flex-basis: 100%; padding-left: 92px; box-sizing: border-box; white-space: normal; }
+  /* A row with no time slot: the text lines up after the dot. */
+  .cl-feed__row--no-time .cl-feed__text { padding-left: 18px; }
 }
 
 /* ----- Pagination ----- */
 .cl-pager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 8px 0; }
 .cl-pager__range { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.cl-pager__controls { display: inline-flex; align-items: center; gap: 8px; }
+.cl-pager__controls { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
 .cl-pager__size { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
 .cl-pager__size-label { font-size: 12px; color: var(--muted); }
 .cl-input.cl-pager__select { height: var(--h-xs); width: auto; padding-left: 10px; font-size: var(--fs-xs); }

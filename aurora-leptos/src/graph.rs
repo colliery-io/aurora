@@ -6,7 +6,8 @@
 //!   function. It supports a ranked DAG (ranks from the edges) and fixed
 //!   layers with lane bands (containment).
 //! - Interaction: click selects (`on_select`), double click or Enter on the
-//!   selected node opens (`on_open`). Hover or keyboard focus highlights the
+//!   selected node opens (`on_open`). With `defer_select`, a click waits for
+//!   a possible second click, so a double click opens without a select. Hover or keyboard focus highlights the
 //!   edges of a node and dims the rest. Nodes are in the tab order, by layer.
 //! - The status of a node is a class (`status-ok`, ...) that maps to the
 //!   `--x` / `--x-fg` / `--x-bg` tokens. Edge styles are named by the product;
@@ -79,6 +80,59 @@ fn used_styles(table: &[EdgeStyle], edges: &[DagEdge]) -> Vec<EdgeStyle> {
     used
 }
 
+/// `name` as a part of an id: ASCII letters and digits; any other run of
+/// characters is one `-`.
+fn id_part(name: &str) -> String {
+    let mut out = String::new();
+    for c in name.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else if !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    let out = out.trim_matches('-').to_string();
+    if out.is_empty() {
+        "x".to_string()
+    } else {
+        out
+    }
+}
+
+/// The id of the arrowhead marker of edge style `style`, in the graph with
+/// the id `base`. It depends only on the two names, so a product or a test
+/// can find it (AURORA-T-0007 item 15).
+pub fn dag_marker_id(base: &str, style: &str) -> String {
+    format!("{base}-arrow-{}", id_part(style))
+}
+
+/// What a click on a node does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClickIntent {
+    /// Select the node now.
+    SelectNow,
+    /// Select it when no second click comes (`defer_select`).
+    SelectLater,
+    /// Nothing: the second click of a double click (the `dblclick` opens).
+    Ignore,
+}
+
+/// What a node click with the click count `detail` (the `detail` of the DOM
+/// event: 1, then 2 for the second click of a double click) does
+/// (AURORA-T-0007 item 16).
+pub fn click_intent(detail: i32, defer_select: bool) -> ClickIntent {
+    if detail >= 2 {
+        ClickIntent::Ignore
+    } else if defer_select {
+        ClickIntent::SelectLater
+    } else {
+        ClickIntent::SelectNow
+    }
+}
+
+/// How long a deferred select waits for a second click, in ms.
+pub const DOUBLE_CLICK_MS: u64 = 250;
+
 fn edge_classes(style: &EdgeStyle) -> String {
     let mut c = format!("cl-dag__edge cl-dag__hue--{}", style.hue.name());
     if style.dashed {
@@ -149,6 +203,16 @@ pub fn Dag(
     /// natural size, with scroll bars.
     #[prop(default = true)]
     fit: bool,
+    /// The id of the `<svg>`, and the start of the marker ids
+    /// (`{id}-arrow-{style}`, see [`dag_marker_id`]). Default: a unique
+    /// `cl-dag-N`.
+    #[prop(optional, into)]
+    id: String,
+    /// A click waits [`DOUBLE_CLICK_MS`] before `on_select`; a double click
+    /// in that time runs only `on_open`. Use it when a select navigates
+    /// away. Keyboard select does not wait.
+    #[prop(optional)]
+    defer_select: bool,
 ) -> impl IntoView {
     let mut opts = options.unwrap_or_default();
     if let Some(d) = direction {
@@ -164,14 +228,17 @@ pub fn Dag(
         opts.node_h = h;
     }
     let geometry = graph_layout::layout(&nodes, &edges, &lanes, &layers, &opts);
-    let gid = NEXT_GRAPH.fetch_add(1, Ordering::Relaxed);
+    let base_id = if id.is_empty() {
+        format!("cl-dag-{}", NEXT_GRAPH.fetch_add(1, Ordering::Relaxed))
+    } else {
+        id
+    };
 
     let table = style_table(styles);
     let used = used_styles(&table, &edges);
     let marker_of: HashMap<String, String> = used
         .iter()
-        .enumerate()
-        .map(|(i, s)| (s.name.clone(), format!("cl-dag-{gid}-arrow-{i}")))
+        .map(|s| (s.name.clone(), dag_marker_id(&base_id, &s.name)))
         .collect();
     let style_of = |name: &str| {
         used.iter()
@@ -198,6 +265,13 @@ pub fn Dag(
             cb.run(id);
         }
     };
+    // A select that waits for a possible second click (`defer_select`).
+    let pending = StoredValue::new(None::<leptos::leptos_dom::helpers::TimeoutHandle>);
+    let cancel_pending = move || {
+        if let Some(h) = pending.try_update_value(|p| p.take()).flatten() {
+            h.clear();
+        }
+    };
     let mut neighbours: HashMap<String, HashSet<String>> = HashMap::new();
     for e in &geometry.edges {
         neighbours
@@ -218,6 +292,7 @@ pub fn Dag(
             view! {
                 <marker
                     id=marker_of[&s.name].clone()
+                    data-style=s.name.clone()
                     viewBox="0 0 10 10"
                     refX="9"
                     refY="5"
@@ -280,6 +355,7 @@ pub fn Dag(
             let style = style_of(&edge.style);
             let base = edge_classes(&style);
             let (from, to) = (placed.from.clone(), placed.to.clone());
+            let (data_from, data_to) = (from.clone(), to.clone());
             let tip = edge
                 .label
                 .clone()
@@ -295,6 +371,9 @@ pub fn Dag(
             view! {
                 <path
                     class=class
+                    data-style=edge.style.clone()
+                    data-from=data_from
+                    data-to=data_to
                     d=placed.path.clone()
                     marker-end=format!("url(#{})", marker_of[&style.name])
                 >
@@ -415,8 +494,14 @@ pub fn Dag(
             }
             let tooltip = node.tooltip.clone().unwrap_or_else(|| aria.clone());
 
-            let (click_id, dbl_id, key_id, enter_id, focus_id) =
-                (id.clone(), id.clone(), id.clone(), id.clone(), id.clone());
+            let (click_id, dbl_id, key_id, enter_id, focus_id, item_id) = (
+                id.clone(),
+                id.clone(),
+                id.clone(),
+                id.clone(),
+                id.clone(),
+                id.clone(),
+            );
             let on_key = move |ev: leptos::ev::KeyboardEvent| match ev.key().as_str() {
                 "Enter" => {
                     ev.prevent_default();
@@ -435,11 +520,13 @@ pub fn Dag(
 
             let more = (node.more > 0).then(|| {
                 let n = node.more;
-                let (more_id, more_key_id) = (id.clone(), id.clone());
+                let (more_id, more_key_id, more_node, more_focus_id) =
+                    (id.clone(), id.clone(), id.clone(), id.clone());
                 let (cx, cy) = (x + w - 2.0, y + 2.0);
                 view! {
                     <g
                         class="cl-dag__more"
+                        data-node=more_node
                         role="button"
                         tabindex="0"
                         aria-label=format!("Show {n} more linked items")
@@ -449,9 +536,13 @@ pub fn Dag(
                                 cb.run(more_id.clone());
                             }
                         }
+                        on:dblclick=move |ev| ev.stop_propagation()
+                        on:focus=move |_| hovered.set(Some(more_focus_id.clone()))
+                        on:blur=move |_| hovered.set(None)
                         on:keydown=move |ev: leptos::ev::KeyboardEvent| {
                             if matches!(ev.key().as_str(), "Enter" | " " | "Spacebar") {
                                 ev.prevent_default();
+                                ev.stop_propagation();
                                 if let Some(cb) = on_more {
                                     cb.run(more_key_id.clone());
                                 }
@@ -467,7 +558,42 @@ pub fn Dag(
                 }
             });
 
+            let on_click =
+                move |ev: leptos::ev::MouseEvent| match click_intent(ev.detail(), defer_select) {
+                    ClickIntent::SelectNow => select(click_id.clone()),
+                    ClickIntent::SelectLater => {
+                        cancel_pending();
+                        let id = click_id.clone();
+                        let h = set_timeout_with_handle(
+                            move || {
+                                pending.set_value(None);
+                                select(id);
+                            },
+                            std::time::Duration::from_millis(DOUBLE_CLICK_MS),
+                        )
+                        .ok();
+                        pending.set_value(h);
+                    }
+                    ClickIntent::Ignore => {}
+                };
+            let on_dblclick = move |_| {
+                cancel_pending();
+                own_selection.set(Some(dbl_id.clone()));
+                open(dbl_id.clone());
+            };
+
+            // The node and its "+N" badge are one item: the hover covers
+            // both, the badge dims with its node, and `[data-node=id]`
+            // finds both (AURORA-T-0007 item 17). The badge is not inside
+            // the node's `role="button"`: a button in a button has no
+            // accessible name of its own.
             view! {
+                <g
+                    class="cl-dag__item"
+                    data-node=item_id
+                    on:mouseenter=move |_| hovered.set(Some(enter_id.clone()))
+                    on:mouseleave=move |_| hovered.set(None)
+                >
                 <g
                     class=class
                     data-id=id.clone()
@@ -476,11 +602,9 @@ pub fn Dag(
                     tabindex="0"
                     aria-label=aria
                     aria-pressed=pressed
-                    on:click=move |_| select(click_id.clone())
-                    on:dblclick=move |_| open(dbl_id.clone())
+                    on:click=on_click
+                    on:dblclick=on_dblclick
                     on:keydown=on_key
-                    on:mouseenter=move |_| hovered.set(Some(enter_id.clone()))
-                    on:mouseleave=move |_| hovered.set(None)
                     on:focus=move |_| hovered.set(Some(focus_id.clone()))
                     on:blur=move |_| hovered.set(None)
                 >
@@ -499,6 +623,7 @@ pub fn Dag(
                     {mark_views}
                 </g>
                 {more}
+                </g>
             }
         })
         .collect_view();
@@ -521,6 +646,7 @@ pub fn Dag(
         <div class=wrap_class>
             {legend_view}
             <svg
+                id=base_id
                 class=svg_class
                 width=w
                 height=h
