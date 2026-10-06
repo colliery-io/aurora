@@ -7,9 +7,10 @@
 Colliery's **design system for [Leptos](https://leptos.dev)**, with a light
 and a dark theme — the Aurora identity (tokens, components, data-display
 widgets, stylesheet) as a reusable Rust/WASM crate. Aurora was formerly called
-"Aurora Dark"; the crate name (`colliery-io-aurora`) and the repository name
-(`aurora-dark`) stay. It's the core that control-plane apps (cloacina
-included) are built from; app-specific vocab, colors, and branding are supplied
+"Aurora Dark", and its repository was `colliery-io/aurora-dark` (GitHub
+redirects the old URL); the crate name `colliery-io-aurora` stays. It's the
+core that control-plane apps (cloacina included) are built from; app-specific
+vocab, colors, and branding are supplied
 as data, not shipped.
 
 ## When to use this
@@ -73,7 +74,7 @@ Or as a git dependency (Cargo finds the crate in this repo's subdir):
 
 ```toml
 [dependencies]
-colliery-io-aurora = { git = "https://github.com/colliery-io/aurora-dark", rev = "<commit-sha>" }
+colliery-io-aurora = { git = "https://github.com/colliery-io/aurora", rev = "<commit-sha>" }
 ```
 ```rust
 use aurora_leptos::{components::*, widgets::*, graph::*, tokens::token};

@@ -6,7 +6,7 @@ version = "0.4.2"
 edition = "2021"
 license = "Apache-2.0"
 description = "Aurora — Colliery's design system for Leptos, with light and dark themes: the core that control-plane apps are built from (components, tokens, stylesheet)."
-repository = "https://github.com/colliery-io/aurora-dark"
+repository = "https://github.com/colliery-io/aurora"
 
 # Ship the stylesheet with the crate so build.rs can emit it (write_css) and the
 # CSS consts are available.
