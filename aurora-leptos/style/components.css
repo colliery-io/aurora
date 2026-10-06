@@ -916,6 +916,18 @@ a.cl-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; pointer-even
   border-right: 1px solid var(--border);
 }
 .cl-appshell__scrim { display: none; }
+/* The header is sticky: keep an anchor target or a scrollIntoView target
+   out from under it (AURORA-T-0007 item 13). The header is 52px high; the
+   rest is a little air. */
+html:has(.cl-appshell:not(.cl-appshell--contained):not(.cl-appshell--no-header)) {
+  scroll-padding-top: calc(52px + var(--space-sm));
+}
+@media (max-width: 768px) {
+  /* Below 768px the header shows even with no-header (it holds the menu). */
+  html:has(.cl-appshell:not(.cl-appshell--contained)) {
+    scroll-padding-top: calc(52px + var(--space-sm));
+  }
+}
 .cl-appshell__main { grid-area: main; min-width: 0; padding: 22px 28px; }
 
 .cl-appshell--contained {
