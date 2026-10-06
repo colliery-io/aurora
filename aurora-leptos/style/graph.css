@@ -103,6 +103,8 @@
 /* ----- Hover / keyboard focus: the node, its edges, its neighbours ----- */
 .cl-dag--hovering .cl-dag__edge:not(.cl-dag__edge--hot) { opacity: 0.18; }
 .cl-dag--hovering .cl-dag__node:not(.cl-dag__node--hot):not(.cl-dag__node--near) { opacity: 0.45; }
+/* The "+N" badge dims with its node (AURORA-T-0007 item 17). */
+.cl-dag--hovering .cl-dag__node:not(.cl-dag__node--hot):not(.cl-dag__node--near) + .cl-dag__more { opacity: 0.45; }
 
 @media (prefers-reduced-motion: reduce) {
   .cl-dag .cl-pulse { animation: none; }
