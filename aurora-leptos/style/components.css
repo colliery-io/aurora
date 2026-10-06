@@ -142,6 +142,12 @@
 /* color override: bad/danger */
 .cl-btn--bad.cl-btn--filled { background: var(--bad); color: var(--on-status); }
 .cl-btn--bad.cl-btn--light  { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad-fg); }
+/* subtle and default take the danger text colour too, and a danger hover
+   (AURORA-T-0008 item 1). */
+.cl-btn--bad.cl-btn--subtle { color: var(--bad-fg); }
+.cl-btn--bad.cl-btn--subtle:hover { background: var(--bad-bg); }
+.cl-btn--bad.cl-btn--default { color: var(--bad-fg); }
+.cl-btn--bad.cl-btn--default:hover { background: var(--bad-bg); }
 /* variant: alert — tinted to the surrounding alert's --alert-color (no blue clash) */
 .cl-btn--alert {
   background: color-mix(in srgb, var(--alert-color, var(--bad)) 16%, transparent);
@@ -204,6 +210,8 @@ textarea.cl-input { height: auto; padding: 8px 12px; line-height: 1.5; resize: v
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
   letter-spacing: 0.18em;
 }
+/* The spacing is for the bullets, not the placeholder (AURORA-T-0008 item 2). */
+.cl-input[type="password"]::placeholder { letter-spacing: normal; }
 
 /* Select — native <select> styled to match, with a chevron.
    The chevron is two thin diagonal strokes drawn with gradients in
@@ -1250,6 +1258,15 @@ html:has(.cl-appshell:not(.cl-appshell--contained):not(.cl-appshell--no-header))
   line-height: 1.1;
   color: var(--stat-color, var(--fg-bright));
   overflow-wrap: anywhere;
+}
+/* `text=true`: a value that is text (a name, "just now"). A smaller size, on
+   one line, cut with an ellipsis (AURORA-T-0008 item 3). */
+.cl-stat__value--text { font-size: var(--fs-xl); overflow-wrap: normal; min-width: 0; }
+.cl-stat__value--text .cl-stat__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cl-stat__unit { font-size: 12px; font-weight: 500; color: var(--muted); }
 .cl-stat__foot { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }

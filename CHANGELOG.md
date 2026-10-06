@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.2
+
+A patch release with the repairs of AURORA-T-0008: the defects that the
+Cloacina migration found, and that 0.4.1 kept. Nothing is removed or renamed.
+The numbers are the items of AURORA-T-0008. `tests/aurora_t_0008.rs` has a
+test for each item.
+
+- **1.** `Button bad=true` colours the `subtle` and `default` variants too: the
+  danger text colour, and a danger tint on hover. (0.4.1 coloured only
+  `filled` and `light`.)
+- **2.** The placeholder of a password input has normal letter-spacing. The
+  wide spacing is for the bullets only.
+- **3.** `StatTile` has a `text` prop for a value that is text (a name,
+  "just now"): a smaller size (`--fs-xl`), on one line, with an ellipsis. The
+  full value is the `title`. The gallery has two examples.
+
+Cloacina can now remove the "Workarounds for Aurora 0.4" rules from its
+`ui/style/app.css` (`.cl-btn--bad.cl-btn--subtle`, `.cl-btn--bad.cl-btn--default`,
+the password placeholder rule, `.app-stat-text`).
+
 ## 0.4.1
 
 A patch release with the repairs of AURORA-T-0007: the defects that the
