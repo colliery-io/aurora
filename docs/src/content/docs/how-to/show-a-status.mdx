@@ -1,0 +1,88 @@
+---
+title: Show a status
+description: Show a status as a badge, a pill or a dot, in the right hue.
+sidebar:
+  order: 5
+---
+
+import StatusBadge from 'starlight-aurora/components/StatusBadge.astro';
+
+Aurora has four ways to show a status. Each one uses a status hue, so it
+follows the theme and meets the contrast rules.
+
+The badges on this page are drawn by the Starlight theme of this site, with
+the same tokens. In your app, use the Rust components below.
+
+## A status that Aurora knows
+
+Use `StatusBadge`. Give it the status text:
+
+```rust
+use aurora_leptos::components::*;
+
+view! { <StatusBadge status="running" /> }
+```
+
+Aurora picks the hue from the text. The case does not matter.
+
+| Text | Hue | Result |
+|---|---|---|
+| `running` | ice | <StatusBadge status="running" /> |
+| `completed` | ok | <StatusBadge status="completed" /> |
+| `failed` | bad | <StatusBadge status="failed" /> |
+| `scheduled` | violet | <StatusBadge status="scheduled" /> |
+| `pending`, `paused` | muted | <StatusBadge status="pending" /> |
+| `cancelled`, `canceled` | gold | <StatusBadge status="cancelled" /> |
+| `skipped` | skip | <StatusBadge status="skipped" /> |
+| any other text | muted | <StatusBadge status="unknown" /> |
+
+`status_color(status)` gives the same hue token, for your own markup.
+
+## A status of your own
+
+Use `Pill`, and give it a hue token:
+
+```rust
+use aurora_leptos::components::*;
+use aurora_leptos::tokens::token;
+
+view! { <Pill color=token::OK>"healthy"</Pill> }
+```
+
+The result: <StatusBadge status="healthy" hue="ok" />
+
+The pill puts the `-fg` token of the hue on its `-bg` fill. The hues are
+`ICE`, `TEAL`, `VIOLET`, `GOLD`, `OK`, `BAD`, `SKIP` and `MUTED`.
+
+To explain the status in a tooltip, use `HealthPill`:
+
+```rust
+use aurora_leptos::widgets::HealthPill;
+use aurora_leptos::tokens::token;
+
+view! { <HealthPill label="degraded" color=token::GOLD tip="2 of 5 replicas are down" /> }
+```
+
+## A build status
+
+Use `BuildStatusBadge`. It knows `success` (ok), `failed` (bad), `building`
+(ice) and `pending` (muted):
+
+```rust
+use aurora_leptos::widgets::BuildStatusBadge;
+
+view! { <BuildStatusBadge status="building" /> }
+```
+
+## A dot
+
+Use `Dot` next to a name, in a list or a table:
+
+```rust
+use aurora_leptos::components::*;
+use aurora_leptos::tokens::token;
+
+view! { <Dot color=token::OK /> }
+```
+
+`size` is in px (default 8). `glow=true` adds a soft ring.
