@@ -1,0 +1,69 @@
+---
+title: Status pairs and contrast
+description: Why each status hue has three tokens, and how they meet WCAG AA.
+sidebar:
+  order: 2
+---
+
+import StatusBadge from 'starlight-aurora/components/StatusBadge.astro';
+
+Aurora has eight status hues: ice, teal, violet, gold, ok, bad, skip and
+muted. Each hue has three tokens.
+
+| Token | Use | Here |
+|---|---|---|
+| `--x` | The hue. Dots, meters, count badges, borders, and text on a page or a panel. | <span style="display:inline-block;width:1.6em;height:1.2em;border-radius:var(--radius-sm);background:var(--ok)"></span> `--ok` |
+| `--x-fg` | Text on the `--x-bg` fill: pills and badges. | <span style="color:var(--ok-fg)">`--ok-fg` text</span> |
+| `--x-bg` | The tinted fill behind `--x-fg`. | <span style="display:inline-block;padding:0 0.5em;border-radius:var(--radius-pill);background:var(--ok-bg);color:var(--ok-fg)">fill</span> |
+
+Text on a solid hue fill uses `--on-status`.
+
+## Why not one token
+
+A pill is text in a hue on a tint of the same hue. Before 0.4, Aurora had a
+dark theme only, and drew a pill with one colour: the hue for the text, and
+the hue with hex alpha `1c` (11%) for the fill. In the dark theme that works.
+In the light theme it does not: a hue that is clear as a dot is too light as
+text on its own tint.
+
+So the text of a pill is its own token, `--x-fg`. In the light theme it is a
+darker step of the hue. In the dark theme it is the same as the hue.
+
+| Hue | Light: `--x` | Light: `--x-fg` | Dark: `--x` | Dark: `--x-fg` |
+|---|---|---|---|---|
+| ice | `#1f60cc` | `#174ca6` | `#7fb2ff` | `#7fb2ff` |
+| ok | `#15793b` | `#126a33` | `#4bd07f` | `#4bd07f` |
+| bad | `#c22a2a` | `#a51f1f` | `#f06464` | `#f06464` |
+
+The [token reference](../../reference/tokens/) has each value.
+
+## The fill follows the hue
+
+`--x-bg` is not a value of its own. It is the hue at 11%:
+
+```css
+--ok-bg: color-mix(in srgb, var(--ok) 11%, transparent);
+```
+
+So the fill changes with the hue in each theme, hyper too, and a product that
+changes a hue does not have to change the fill.
+
+## How the contrast is checked
+
+`tests/contrast.rs` puts each fill over each surface that a pill sits on (the
+page and the panels), and checks the `-fg` text on the result. Each pair must
+meet 4.5:1, in the light, the dark and the hyper theme. The same test checks
+each text token on each surface, and the hues as graphics at 3:1. See
+[Rules and checks](../../reference/checks/#contrast).
+
+## The components use the pair
+
+You give a component the hue, and it takes the pair:
+
+- `Pill color=token::OK` uses `--ok-fg` on `--ok-bg`.
+- `StatusBadge status="failed"` picks bad, and uses `--bad-fg` on `--bad-bg`.
+- `fg_for(token::OK)` and `fill_for(token::OK)` give the pair for your own markup.
+
+<StatusBadge status="completed" /> <StatusBadge status="failed" />
+<StatusBadge status="running" /> <StatusBadge status="cancelled" />
+<StatusBadge status="skipped" /> <StatusBadge status="pending" />

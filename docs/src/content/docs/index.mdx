@@ -1,0 +1,60 @@
+---
+title: Aurora
+description: Aurora is the Colliery design system for Leptos. It has a light, a dark and an opt-in hyper theme.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import StatusBadge from 'starlight-aurora/components/StatusBadge.astro';
+
+Aurora is the Colliery design system for [Leptos](https://leptos.dev). It is
+one Rust crate, [`colliery-io-aurora`](https://crates.io/crates/colliery-io-aurora),
+that holds the design tokens, the stylesheet and the components of a
+control-plane UI: layout, inputs, tables, overlays, status pills, data widgets
+and a graph. You build the screens. Aurora draws them.
+
+You import the crate as `aurora_leptos`.
+
+## Who uses it
+
+- [Kairos](https://github.com/colliery-io/kairos), [Cloacina](https://github.com/colliery-io/cloacina),
+  [Brokkr](https://github.com/colliery-io/brokkr) and [Weir](https://github.com/colliery-io/weir)
+  draw their web UIs with Aurora.
+- [Hlin](https://github.com/colliery-io/hlin) draws its panels with Aurora,
+  through the `hlin` feature.
+- This site uses Aurora too, through the Starlight theme
+  [starlight-aurora](https://colliery-io.github.io/starlight-aurora/).
+
+## The themes
+
+Aurora has three themes. Each colour token holds a value for each theme, so
+a status means the same thing in each one.
+
+| Theme | What it is |
+|---|---|
+| Light | Dark text on light surfaces. |
+| Dark | Light text on dark surfaces. |
+| Hyper | Neon hues on a dark base, with a soft glow. A product must turn it on. |
+
+By default a page follows the operating system: light or dark. Use the theme
+select in the header of this site to see each theme. The badges change with it:
+<StatusBadge status="running" /> <StatusBadge status="completed" />
+<StatusBadge status="failed" /> <StatusBadge status="scheduled" />
+<StatusBadge status="cancelled" />
+
+## Start here
+
+<CardGrid>
+	<LinkCard title="Tutorial" description="Add Aurora to a Leptos app." href="tutorials/first-app/" />
+	<LinkCard title="How-to guides" description="Turn on hyper, use a token, show a status, run the gallery." href="how-to/turn-on-hyper/" />
+	<LinkCard title="Reference" description="Tokens, components, themes, features." href="reference/" />
+	<LinkCard title="Explanation" description="Why the tokens and the rules are as they are." href="explanation/light-dark/" />
+</CardGrid>
+
+## Links
+
+- [The API reference on docs.rs](https://docs.rs/colliery-io-aurora)
+- [The crate on crates.io](https://crates.io/crates/colliery-io-aurora)
+- [The repository](https://github.com/colliery-io/aurora), with the
+  [change log](https://github.com/colliery-io/aurora/blob/main/CHANGELOG.md)
+- [`PATTERNS.md`](https://github.com/colliery-io/aurora/blob/main/aurora-leptos/PATTERNS.md):
+  which component to use for a task
