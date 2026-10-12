@@ -16,7 +16,7 @@ own components and tokens.
 
    ```toml
    [dependencies]
-   colliery-io-aurora = { version = "0.5", features = ["hlin"] }
+   colliery-io-aurora = { version = "0.6", features = ["hlin"] }
    hlin-ui = "0.1"
    leptos = { version = "0.8", features = ["csr"] }
    ```

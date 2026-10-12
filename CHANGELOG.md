@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
 
 The repairs of AURORA-T-0013, the defects that the Skadi migration to 0.5.0
 found, and of AURORA-T-0012. The numbers are the items of AURORA-T-0013.

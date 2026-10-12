@@ -26,7 +26,7 @@ dependency, so the hook runs a small helper crate of your own.
    publish = false
 
    [dependencies]
-   colliery-io-aurora = { version = "0.5", default-features = false }
+   colliery-io-aurora = { version = "0.6", default-features = false }
    ```
 
    With `default-features = false` the helper does not build Leptos.
@@ -80,7 +80,7 @@ The crate has a binary, `aurora-css`, behind the `bin` feature. Install it on
 each machine and in CI, at the version of the app:
 
 ```sh
-cargo install colliery-io-aurora --locked --version 0.5.0 --no-default-features --features bin
+cargo install colliery-io-aurora --locked --version 0.6.0 --no-default-features --features bin
 ```
 
 Then the hook is:
