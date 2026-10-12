@@ -13,7 +13,10 @@ use leptos::prelude::*;
 fn context(notice: Option<Cause>) -> Context {
     Context {
         treatment: Treatment::Normal,
-        notice: notice.map(|cause| Notice { cause, offer_successor: false }),
+        notice: notice.map(|cause| Notice {
+            cause,
+            offer_successor: false,
+        }),
         age_seconds: None,
         controls: Vec::new(),
         emit: Emit::nowhere(),
@@ -24,7 +27,8 @@ fn envelope(json: &str) -> Envelope {
     serde_json::from_str(json).expect("envelope")
 }
 
-const SCALAR: &str = r#"{"envelope":"scalar.v1","value":42,"unit":"ms","label":"p95","previous":40}"#;
+const SCALAR: &str =
+    r#"{"envelope":"scalar.v1","value":42,"unit":"ms","label":"p95","previous":40}"#;
 const SERIES: &str = r#"{"envelope":"series.v1","unit":"rps","series":[
     {"name":"a","points":[[1000,1],[2000,3],[3000,null],[4000,2]]},
     {"name":"b","points":[[1000,2],[2000,2],[3000,4],[4000,1]]}]}"#;
@@ -55,8 +59,13 @@ fn every_view() -> String {
             envelope(STATUS),
             envelope(OPTIONS),
         );
-        let (Envelope::Scalar(sc), Envelope::Series(se), Envelope::Records(re), Envelope::Status(st), Envelope::Options(op)) =
-            (&scalar, &series, &records, &status, &options)
+        let (
+            Envelope::Scalar(sc),
+            Envelope::Series(se),
+            Envelope::Records(re),
+            Envelope::Status(st),
+            Envelope::Options(op),
+        ) = (&scalar, &series, &records, &status, &options)
         else {
             panic!("envelope shapes")
         };
@@ -118,7 +127,10 @@ fn hlin_css_styles_each_component_the_pack_draws() {
         .iter()
         .filter(|class| styles(AURORA_CSS, class) && !styles(HLIN_CSS, class))
         .collect();
-    assert!(missing.is_empty(), "styled in AURORA_CSS, not in HLIN_CSS: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "styled in AURORA_CSS, not in HLIN_CSS: {missing:?}"
+    );
 }
 
 #[test]
