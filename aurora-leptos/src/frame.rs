@@ -2,7 +2,8 @@
 //!
 //! - [`AppShell`] + [`SideNav`] / [`SideNavGroup`] / [`SideNavLink`]: the app
 //!   scaffold. A header, a sidebar with groups of links, a brand slot, a footer
-//!   slot. Below 768px the sidebar becomes a drawer behind a menu button.
+//!   slot, a skip link. Below 768px the sidebar becomes a drawer behind a menu
+//!   button; [`use_app_shell`] reads and closes it.
 //! - [`PageHeader`]: back link, `<h1>` title, sub line, meta line, actions.
 //! - [`Modal`] and [`Drawer`]: dialogs with sizes, a footer, Escape to close,
 //!   and a focus trap that gives focus back to the opener.
@@ -140,7 +141,8 @@ impl ToastKind {
         }
     }
 
-    /// `alert` for errors (read at once), `status` for the others.
+    /// `alert` for errors (read at once), `status` for the others: the role
+    /// of the live region of [`ToastStack`] that reads a toast of this kind.
     pub fn role(self) -> &'static str {
         match self {
             ToastKind::Error => "alert",
@@ -319,6 +321,56 @@ fn active_html_element() -> Option<web_sys::HtmlElement> {
 // AppShell + SideNav
 // ============================================================================
 
+/// The width (px) below which an [`AppShell`] puts its sidebar in a drawer,
+/// when the shell has no `breakpoint` prop.
+pub const APPSHELL_BREAKPOINT: u32 = 768;
+
+/// The drawer of an [`AppShell`]: the sidebar on a narrow screen. `Copy`.
+///
+/// The shell puts it in the context, so the header, the sidebar and the page
+/// can read it with [`use_app_shell`]: close the drawer on a route change, or
+/// from a link or a shortcut. Or give the shell your own signal with the
+/// `nav_open` prop.
+#[derive(Clone, Copy)]
+pub struct AppShellNav {
+    open: RwSignal<bool>,
+}
+
+impl AppShellNav {
+    /// The open state, as a signal to read, watch or set.
+    pub fn open_signal(&self) -> RwSignal<bool> {
+        self.open
+    }
+
+    /// Whether the drawer is open (tracked).
+    pub fn is_open(&self) -> bool {
+        self.open.get()
+    }
+
+    /// Opens the drawer.
+    pub fn open(&self) {
+        self.open.set(true);
+    }
+
+    /// Closes the drawer. Focus does not move. Does nothing after the shell
+    /// is gone.
+    pub fn close(&self) {
+        if self.open.try_get_untracked() == Some(true) {
+            self.open.set(false);
+        }
+    }
+
+    /// Opens the drawer when it is closed, and closes it when it is open.
+    pub fn toggle(&self) {
+        self.open.update(|v| *v = !*v);
+    }
+}
+
+/// The drawer of the nearest [`AppShell`] above, or `None` outside a shell.
+pub fn use_app_shell() -> Option<AppShellNav> {
+    use_context::<AppShellNav>()
+}
+
 /// The app scaffold: a header across the top, a sidebar, and the main area.
 ///
 /// - `header` (optional): the top bar content (search, user menu, theme toggle).
@@ -329,10 +381,23 @@ fn active_html_element() -> Option<web_sys::HtmlElement> {
 /// - `contained`: draw the shell as a bordered panel of fixed height (for docs
 ///   and galleries). By default the shell fills the page.
 /// - `menu_label`: the accessible name of the menu button (default "Menu").
+/// - `nav_open` (optional): the open state of the drawer, as your own signal.
+///   With none, the shell makes one. Either way it is in the context as an
+///   [`AppShellNav`] ([`use_app_shell`]).
+/// - `main_id`, `main_class` (optional): the `id` and more classes of the
+///   `<main>`. With an id, `<main>` also has `tabindex="-1"`, so a skip link
+///   can move focus to it.
+/// - `skip_link` (optional): the text of a skip link ("Skip to content"). It
+///   is the first element of the shell, so it is the first Tab stop, and it
+///   shows only when it has focus. It goes to `main_id` (default `"main"`).
+/// - `breakpoint` (optional): the width in px below which the sidebar is a
+///   drawer. Default [`APPSHELL_BREAKPOINT`] (768).
 ///
-/// Below 768px the sidebar leaves the layout. A menu button in the header
-/// opens it as a drawer from the left. Escape, a click on the scrim, or a click
-/// on a link closes it, and focus goes back to the menu button.
+/// Below the breakpoint the sidebar leaves the layout. A menu button in the
+/// header opens it as a drawer from the left, and the page under it does not
+/// scroll. Escape, a click on the scrim, or a click on a link closes it, and
+/// focus goes back to the menu button. When the window gets wider than the
+/// breakpoint, the drawer closes.
 #[component]
 pub fn AppShell(
     #[prop(optional)] header: Option<Children>,
@@ -340,14 +405,25 @@ pub fn AppShell(
     #[prop(optional)] brand: Option<ChildrenFn>,
     #[prop(optional)] contained: bool,
     #[prop(default = "Menu".to_string(), into)] menu_label: String,
+    #[prop(optional)] nav_open: Option<RwSignal<bool>>,
+    #[prop(optional, into)] main_id: String,
+    #[prop(optional, into)] main_class: String,
+    #[prop(optional, into)] skip_link: String,
+    #[prop(optional)] breakpoint: Option<u32>,
     children: Children,
 ) -> impl IntoView {
-    let nav_open = RwSignal::new(false);
+    let nav_open = nav_open.unwrap_or_else(|| RwSignal::new(false));
+    provide_context(AppShellNav { open: nav_open });
     let has_nav = navbar.is_some();
     let has_header = header.is_some();
     let nav_id = next_id("appshell-nav");
     let menu_ref = NodeRef::<html::Button>::new();
     let nav_ref = NodeRef::<html::Div>::new();
+    let main_id = if main_id.is_empty() && !skip_link.is_empty() {
+        "main".to_string()
+    } else {
+        main_id
+    };
 
     let mut class = String::from("cl-appshell");
     if contained {
@@ -359,23 +435,31 @@ pub fn AppShell(
     if !has_header {
         class.push_str(" cl-appshell--no-header");
     }
+    // A breakpoint of its own: the CSS cannot read it in a media query, so the
+    // shell sets `cl-appshell--narrow` itself.
+    if breakpoint.is_some() {
+        class.push_str(" cl-appshell--bp");
+    }
+    let narrow = RwSignal::new(false);
+    watch_narrow(breakpoint.unwrap_or(APPSHELL_BREAKPOINT), narrow, nav_open);
 
     let close_nav = move |refocus: bool| {
-        if nav_open.get_untracked() {
+        if nav_open.try_get_untracked() == Some(true) {
             nav_open.set(false);
             if refocus {
-                if let Some(b) = menu_ref.get_untracked() {
+                if let Some(b) = menu_ref.try_get_untracked().flatten() {
                     let _ = b.focus();
                 }
             }
         }
     };
 
-    // When the drawer opens, move focus to its first link.
+    // When the drawer opens, move focus to its first link. The frame may come
+    // after the shell is gone (AURORA-T-0013 item 21).
     Effect::new(move |_| {
         if nav_open.get() {
             request_animation_frame(move || {
-                if let Some(nav) = nav_ref.get_untracked() {
+                if let Some(nav) = nav_ref.try_get_untracked().flatten() {
                     if let Some(first) = focusables(&nav).into_iter().next() {
                         let _ = first.focus();
                     }
@@ -464,13 +548,66 @@ pub fn AppShell(
         }
     });
 
+    let skip = (!skip_link.is_empty())
+        .then(|| view! { <a class="cl-skip-link" href=format!("#{main_id}")>{skip_link}</a> });
+    let main_class = if main_class.is_empty() {
+        "cl-appshell__main".to_string()
+    } else {
+        format!("cl-appshell__main {main_class}")
+    };
+    let has_main_id = !main_id.is_empty();
     view! {
-        <div class=class class:cl-appshell--nav-open=move || nav_open.get()>
+        <div
+            class=class
+            class:cl-appshell--nav-open=move || nav_open.get()
+            class:cl-appshell--narrow=move || narrow.get()
+        >
+            {skip}
             {bar}
             {sidebar}
-            <main class="cl-appshell__main">{children()}</main>
+            <main
+                class=main_class
+                id=has_main_id.then_some(main_id)
+                tabindex=has_main_id.then_some("-1")
+            >
+                {children()}
+            </main>
         </div>
     }
+}
+
+/// Keeps `narrow` true while the window is at most `px` wide, and closes the
+/// drawer when the window gets wider. Only in a browser.
+fn watch_narrow(px: u32, narrow: RwSignal<bool>, nav_open: RwSignal<bool>) {
+    if !cfg!(target_arch = "wasm32") {
+        return;
+    }
+    use leptos::wasm_bindgen::closure::Closure;
+    let Some(mql) = window()
+        .match_media(&format!("(max-width: {px}px)"))
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    narrow.set(mql.matches());
+    let watched = mql.clone();
+    let on_change = Closure::<dyn FnMut()>::new(move || {
+        let is_narrow = watched.matches();
+        narrow.try_set(is_narrow);
+        if !is_narrow && nav_open.try_get_untracked() == Some(true) {
+            nav_open.set(false);
+        }
+    });
+    let _ = mql.add_event_listener_with_callback("change", on_change.as_ref().unchecked_ref());
+    // The listener goes when the shell goes.
+    let held = StoredValue::new_local(Some((mql, on_change)));
+    on_cleanup(move || {
+        if let Some((mql, on_change)) = held.try_update_value(|v| v.take()).flatten() {
+            let _ = mql
+                .remove_event_listener_with_callback("change", on_change.as_ref().unchecked_ref());
+        }
+    });
 }
 
 /// The sidebar navigation: a `<nav>` landmark with groups of links and an
@@ -641,6 +778,12 @@ struct DialogProps {
     close_on_scrim: bool,
     locked: Signal<bool>,
     on_close: Option<Callback<()>>,
+    /// `"dialog"` or `"alertdialog"`.
+    role: &'static str,
+    /// The id of the text that says what the dialog is about.
+    described_by: Option<String>,
+    /// Render where the component is, not at the end of `<body>`.
+    in_place: bool,
 }
 
 fn dialog_frame(p: DialogProps) -> impl IntoView {
@@ -654,6 +797,9 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
         close_on_scrim,
         locked,
         on_close,
+        role,
+        described_by,
+        in_place,
     } = p;
     let size = match size.as_str() {
         "sm" | "md" | "lg" | "xl" => size,
@@ -692,6 +838,16 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
             let panel = NodeRef::<html::Div>::new();
             Effect::new(move |_| {
                 if let Some(el) = panel.get() {
+                    // Move the layer to the end of <body>, so no rule of the
+                    // page (a transform, an overflow, a size) can reach the
+                    // fixed scrim (AURORA-T-0013 item 16). Before the focus:
+                    // a move takes focus away. Leptos removes the layer from
+                    // there when the dialog closes.
+                    if !in_place {
+                        if let (Some(layer), Some(body)) = (el.parent_element(), document().body()) {
+                            let _ = body.append_child(&layer);
+                        }
+                    }
                     focus_initial(&el);
                 }
             });
@@ -738,9 +894,10 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
                     <div
                         node_ref=panel
                         class=format!("cl-{kind} cl-{kind}--{size}")
-                        role="dialog"
+                        role=role
                         aria-modal="true"
                         aria-label=move || title.get()
+                        aria-describedby=described_by.clone()
                         tabindex="-1"
                     >
                         <div class="cl-modal__header">
@@ -779,6 +936,10 @@ fn dialog_frame(p: DialogProps) -> impl IntoView {
 /// - `on_close` (optional): runs when the person closes the dialog with
 ///   Escape, the scrim or ×.
 ///
+/// - `in_place`: render the dialog where the component is. By default it is
+///   moved to the end of `<body>` when it opens, so no rule of the page can
+///   shrink or clip it.
+///
 /// On open, focus moves into the dialog: to an element with
 /// `data-autofocus`, else the first control in the body, else the footer.
 /// Tab and Shift+Tab stay inside. On close, focus goes back to the element
@@ -792,6 +953,7 @@ pub fn Modal(
     #[prop(default = true)] close_on_scrim: bool,
     #[prop(optional, into)] locked: Signal<bool>,
     #[prop(optional)] on_close: Option<Callback<()>>,
+    #[prop(optional)] in_place: bool,
     children: ChildrenFn,
 ) -> impl IntoView {
     dialog_frame(DialogProps {
@@ -804,6 +966,9 @@ pub fn Modal(
         close_on_scrim,
         locked,
         on_close,
+        role: "dialog",
+        described_by: None,
+        in_place,
     })
 }
 
@@ -821,6 +986,7 @@ pub fn Drawer(
     #[prop(default = true)] close_on_scrim: bool,
     #[prop(optional, into)] locked: Signal<bool>,
     #[prop(optional)] on_close: Option<Callback<()>>,
+    #[prop(optional)] in_place: bool,
     children: ChildrenFn,
 ) -> impl IntoView {
     dialog_frame(DialogProps {
@@ -833,6 +999,9 @@ pub fn Drawer(
         close_on_scrim,
         locked,
         on_close,
+        role: "dialog",
+        described_by: None,
+        in_place,
     })
 }
 
@@ -860,6 +1029,13 @@ pub fn Drawer(
 /// - `notice` (optional): content between the message and the impacts list,
 ///   such as a warning that must be read before the list.
 /// - children (optional): more content under the list (an error, a preview).
+/// - `initial_focus`: the button that has focus when the dialog opens,
+///   `"cancel"` (default) or `"confirm"`. With `confirm_text`, the text field
+///   has it.
+/// - `alert`: `role="alertdialog"`, for a question the person must answer
+///   now; the message is its description, and a click on the scrim does not
+///   close it (AURORA-T-0013 item 17).
+/// - `in_place`: as on [`Modal`].
 #[component]
 pub fn ConfirmDialog(
     open: RwSignal<bool>,
@@ -877,7 +1053,12 @@ pub fn ConfirmDialog(
     #[prop(optional)] on_cancel: Option<Callback<()>>,
     #[prop(optional)] notice: Option<ChildrenFn>,
     #[prop(optional)] children: Option<ChildrenFn>,
+    #[prop(default = "cancel".to_string(), into)] initial_focus: String,
+    #[prop(optional)] alert: bool,
+    #[prop(optional)] in_place: bool,
 ) -> impl IntoView {
+    let focus_confirm = initial_focus == "confirm";
+    let message_id = next_id("confirm-message");
     let typed = RwSignal::new(String::new());
     // Each time the dialog opens, the check starts empty.
     Effect::new(move |_| {
@@ -905,20 +1086,23 @@ pub fn ConfirmDialog(
         }
     };
 
+    let described_by = (!message.is_empty()).then(|| message_id.clone());
     let body: ChildrenFn = {
+        let message_id = message_id.clone();
         let message = message.clone();
         let impacts_label = impacts_label.clone();
         let children = children.clone();
         let notice = notice.clone();
         std::sync::Arc::new(move || {
             let input_id = next_id("confirm");
+            let message_id = message_id.clone();
             let message = message.clone();
             let impacts_label = impacts_label.clone();
             let children = children.clone();
             let notice = notice.clone();
             view! {
                 <div class="cl-confirm">
-                    {(!message.is_empty()).then(|| view! { <p class="cl-confirm__message">{message}</p> })}
+                    {(!message.is_empty()).then(|| view! { <p class="cl-confirm__message" id=message_id>{message}</p> })}
                     {notice.map(|n| view! { <div class="cl-confirm__notice">{n()}</div> })}
                     {move || {
                         let list = impacts.get();
@@ -980,7 +1164,7 @@ pub fn ConfirmDialog(
                 <button
                     type="button"
                     class="cl-btn cl-btn--default"
-                    data-autofocus=(!has_check).then_some("")
+                    data-autofocus=(!has_check && !focus_confirm).then_some("")
                     disabled=move || busy.get()
                     on:click=move |_| cancel()
                 >
@@ -989,6 +1173,7 @@ pub fn ConfirmDialog(
                 <button
                     type="button"
                     class=confirm_class
+                    data-autofocus=(!has_check && focus_confirm).then_some("")
                     disabled=move || !can_confirm.get()
                     aria-busy=move || if busy.get() { "true" } else { "false" }
                     on:click=move |_| confirm()
@@ -1008,9 +1193,12 @@ pub fn ConfirmDialog(
         size,
         children: body,
         footer: Some(footer),
-        close_on_scrim: true,
+        close_on_scrim: !alert,
         locked: busy,
         on_close: on_cancel,
+        role: if alert { "alertdialog" } else { "dialog" },
+        described_by,
+        in_place,
     })
 }
 
@@ -1127,8 +1315,13 @@ pub fn toast(kind: ToastKind, text: impl Into<String>) {
 /// - `toaster` (optional): the queue to show. By default the one in the
 ///   context; if there is none, the stack makes one and provides it.
 ///
-/// A click on a toast dismisses it. Errors have `role="alert"`, the others
-/// `role="status"`. Motion stops when the OS asks for reduced motion.
+/// A click on a toast dismisses it. Motion stops when the OS asks for reduced
+/// motion.
+///
+/// Screen readers hear each new toast from two live regions that the stack
+/// keeps on the page from the start: errors from an assertive one
+/// (`role="alert"`), the others from a polite one (`role="status"`). A region
+/// that comes with its text is often not read (AURORA-T-0013 item 15).
 #[component]
 pub fn ToastStack(
     #[prop(default = 5000)] duration_ms: u64,
@@ -1140,7 +1333,40 @@ pub fn ToastStack(
     let hover = RwSignal::new(false);
     let focus_in = RwSignal::new(false);
     let paused = Signal::derive(move || hover.get() || focus_in.get());
+    let polite = RwSignal::new(String::new());
+    let assertive = RwSignal::new(String::new());
+    let seen = StoredValue::new(0_u64);
+    let turn = StoredValue::new(false);
+    Effect::new(move |_| {
+        let items = toaster.items();
+        let last = seen.get_value();
+        let new: Vec<&ToastItem> = items.iter().filter(|t| t.id > last).collect();
+        if new.is_empty() {
+            return;
+        }
+        seen.set_value(new.iter().map(|t| t.id).max().unwrap_or(last));
+        // The same text twice is no change, and is not read again: every
+        // other announcement ends with a no-break space.
+        turn.update_value(|t| *t = !*t);
+        let end = if turn.get_value() { "\u{a0}" } else { "" };
+        let text = |errors: bool| {
+            new.iter()
+                .filter(|t| (t.kind == ToastKind::Error) == errors)
+                .map(|t| t.text.as_str())
+                .collect::<Vec<_>>()
+                .join(". ")
+        };
+        let (calm, urgent) = (text(false), text(true));
+        if !calm.is_empty() {
+            polite.set(format!("{calm}{end}"));
+        }
+        if !urgent.is_empty() {
+            assertive.set(format!("{urgent}{end}"));
+        }
+    });
     view! {
+        <div class="cl-sr-only" role="status" aria-live="polite" aria-atomic="true">{move || polite.get()}</div>
+        <div class="cl-sr-only" role="alert" aria-live="assertive" aria-atomic="true">{move || assertive.get()}</div>
         <section
             class="cl-toasts"
             aria-label="Notifications"
@@ -1200,7 +1426,6 @@ fn ToastView(
     view! {
         <div
             class=format!("cl-toast cl-toast--{}", item.kind.class())
-            role=item.kind.role()
             style=style
             on:click=move |_| toaster.dismiss(id)
         >

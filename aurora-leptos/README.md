@@ -37,10 +37,11 @@ fn App() -> impl IntoView {
   `Divider` · `AppShell`.
 - **Typography** — `Text` (+ `mono`) · `Code` · `Anchor` · `List`/`ListItem`.
 - **Inputs** — `Button` · `ActionIcon` · `TextInput` · `Textarea` · `PasswordInput` ·
-  `NumberInput` · `Select` · `Switch` · `SegmentedControl` · `CopyButton`.
+  `NumberInput` · `Select` · `Switch` · `SegmentedControl` · `CopyButton` ·
+  `Checkbox` · `FileInput` · `Slider` · `Combobox`.
 - **Data / overlay** — `Table` (+ `TableRow`, `SortHeader`, `TableEmpty`) ·
   `Tooltip` · `Modal` · `Menu`/`MenuItem`/`MenuLabel`/`MenuDivider` · `Alert` ·
-  `Loader`.
+  `Loader` · `Skeleton` · `Disclosure`/`Accordion`.
 - **Data display** (`data`) — `StatTile` · `Sparkline` · `SegmentedBar` ·
   `DetailList`/`KeyValue` · `SectionLabel` · `CodeBlock` · `LogView` ·
   `FeedList`/`FeedRow` · `Pagination` · `RelativeTime` · `LiveIndicator`, and

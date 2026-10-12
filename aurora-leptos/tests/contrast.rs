@@ -316,6 +316,23 @@ fn check_theme(theme: Theme, rows: &mut Vec<Row>) {
         );
     }
     // 4. Component-specific pairs.
+    // The marked item of a segmented control and of ThemeToggle
+    // (AURORA-T-0013 item 7).
+    push(
+        "active segment: --ice-fg on --ice-bg over --inset".into(),
+        p.get("ice-fg"),
+        over(p.get("ice-bg"), p.get("inset")),
+        4.5,
+    );
+    // The help line of a field.
+    for s in ["bg", "panel"] {
+        push(
+            format!("field help: --muted on --{s}"),
+            p.get("muted"),
+            p.get(s),
+            4.5,
+        );
+    }
     push(
         "--tooltip-fg on --tooltip-bg".into(),
         p.get("tooltip-fg"),

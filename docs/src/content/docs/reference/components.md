@@ -112,7 +112,8 @@ A button.
   default, so a button in a `<form>` submits it, as before.
 - `href`: draws a link (`<a>`) that looks like the button.
 - `title`, `aria_label`: the tooltip and the accessible name (give
-  `aria_label` when the children are only an icon).
+  `aria_label` when the children are only an icon). A `String`, a signal
+  or a closure, so they can change (AURORA-T-0013 item 13).
 - `stop_propagation`: the click does not go on to a parent (a button in
   a clickable table row or card).
 
@@ -126,8 +127,8 @@ A button.
 | `loading_label` | `String` | optional |
 | `button_type` | `String` | optional |
 | `href` | `String` | optional |
-| `title` | `String` | optional |
-| `aria_label` | `String` | optional |
+| `title` | `Signal<String>` | optional |
+| `aria_label` | `Signal<String>` | optional |
 | `stop_propagation` | `bool` | optional |
 | `on_click` | `Option<Callback<()>>` | optional |
 | `children` | `Children` | required |
@@ -151,6 +152,12 @@ A one-line text field, bound to `value`.
 - `name`, `autocomplete`, `required`, `spellcheck`: the HTML attributes
   (for forms and password managers).
 - `mono`: the text in the mono font (ids, codes).
+- `description`: a help line under the field, linked to it with
+  `aria-describedby`. A `String`, a signal or a closure.
+- `described_by`: more ids for `aria-describedby` (a help text elsewhere).
+- `required` also marks the label with `*`.
+- `autofocus`: focus the field when it is mounted.
+- `maxlength`, `min`, `max`, `step`: the HTML attributes.
 
 | Prop | Type | Default |
 |---|---|---|
@@ -169,6 +176,13 @@ A one-line text field, bound to `value`.
 | `mono` | `bool` | optional |
 | `id` | `String` | optional |
 | `aria_label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `autofocus` | `bool` | optional |
+| `maxlength` | `Option<u32>` | optional |
+| `min` | `String` | optional |
+| `max` | `String` | optional |
+| `step` | `String` | optional |
 
 ### Select
 
@@ -186,6 +200,10 @@ A native select, bound to `value`.
   component. Default: a unique id.
 - `disabled`, `on_change` (runs with the new value), `name`, `required`,
   `error` (a `String`, a `&str`, a signal or a closure).
+- `description`, `described_by`, `autofocus`: as on `TextInput`.
+
+`options` and `option_pairs` take a `Vec`, a signal or a closure: when
+they change, the select shows the new choices (AURORA-T-0013 item 11).
 
 When `value` matches no option and there is no placeholder, the select
 shows the first option, as a native select does. `value` itself is not
@@ -194,8 +212,8 @@ changed.
 | Prop | Type | Default |
 |---|---|---|
 | `label` | `String` | optional |
-| `options` | `Vec<String>` | optional |
-| `option_pairs` | `Vec<(String, String)>` | optional |
+| `options` | `Signal<Vec<String>>` | optional |
+| `option_pairs` | `Signal<Vec<(String, String)>>` | optional |
 | `value` | `RwSignal<String>` | required |
 | `placeholder` | `String` | optional |
 | `disabled` | `Signal<bool>` | optional |
@@ -205,6 +223,9 @@ changed.
 | `error` | `Signal<String>` | optional |
 | `id` | `String` | optional |
 | `aria_label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `autofocus` | `bool` | optional |
 
 ### Tooltip
 
@@ -269,7 +290,9 @@ A card surface with a title and an optional caption.
 
 A filter chip: a toggle button.
 
-- `label`, `count` (shown when 0 or more), `active`, `on_click`.
+- `label`, `count` (shown when 0 or more), `active`, `on_click`. `count`
+  takes a number, a signal or a closure, so a live count updates
+  (AURORA-T-0013 item 10).
 
 It is a `type="button"` (it does not submit a form) with `aria-pressed`
 from `active`, so a screen reader says whether the filter is on.
@@ -277,7 +300,7 @@ from `active`, so a screen reader says whether the filter is on.
 | Prop | Type | Default |
 |---|---|---|
 | `label` | `String` | required |
-| `count` | `i32` | `-1` |
+| `count` | `Signal<i32>` | `Signal::stored(-1)` |
 | `active` | `Signal<bool>` | required |
 | `on_click` | `Option<Callback<()>>` | optional |
 
@@ -353,15 +376,81 @@ No props.
 
 Standalone spinner (Mantine `Loader`).
 
-No props.
+- `size`: `"xs"` (14px, for a line of text or a button), `"sm"` (20px) or
+  `"md"` (32px, default).
+- `label` (optional): the accessible name ("Loading runs"). With a label
+  the spinner is a `role="status"`; with none it is hidden from screen
+  readers, for a place that says it is busy another way.
+
+| Prop | Type | Default |
+|---|---|---|
+| `size` | `String` | optional |
+| `label` | `String` | optional |
+
+### Skeleton
+
+A grey placeholder in the shape of content that is loading.
+
+- `width`, `height` (CSS lengths): default `100%` and `1em`.
+- `lines`: draw that many lines of text instead (the last one shorter).
+- `circle`: a circle of `height` (an avatar).
+
+It is hidden from screen readers: say "loading" another way (a
+`Loader` with a label, or `aria-busy` on the region). The shimmer stops
+when the OS asks for reduced motion.
+
+| Prop | Type | Default |
+|---|---|---|
+| `width` | `String` | optional |
+| `height` | `String` | optional |
+| `lines` | `usize` | optional |
+| `circle` | `bool` | optional |
+
+### Accordion
+
+A group of `Disclosure`s. By default one is open at a time: opening one
+closes the others (the HTML `name` of `<details>`). `multiple`: any number
+can be open.
+
+| Prop | Type | Default |
+|---|---|---|
+| `multiple` | `bool` | optional |
+| `children` | `Children` | required |
+
+### Disclosure
+
+A section that a person opens and closes: a native `<details>` with a
+`<summary>`, so the keyboard and screen readers work with no script.
+
+- `title`: the always-visible line.
+- `open` (optional): the open state, as a signal to read or set. With none,
+  the section starts closed (or `default_open`) and keeps its own state.
+- Inside an `Accordion`, opening one section closes the others.
+
+| Prop | Type | Default |
+|---|---|---|
+| `title` | `Signal<String>` | required |
+| `open` | `Option<RwSignal<bool>>` | optional |
+| `default_open` | `bool` | optional |
+| `children` | `Children` | required |
 
 ### ActionIcon
 
 Square icon-only button (Mantine `ActionIcon`).
 
+- `aria_label`: the accessible name. Give it: the children are an icon.
+  With none, the `title` is the name.
+- `title`: the tooltip.
+- `disabled`: a `bool`, a signal or a closure.
+- `button_type`: the `type` attribute, `"button"` by default, so the
+  button does not submit a form (AURORA-T-0013 item 12).
+
 | Prop | Type | Default |
 |---|---|---|
-| `title` | `String` | optional |
+| `title` | `Signal<String>` | optional |
+| `aria_label` | `Signal<String>` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `button_type` | `String` | `"button"` |
 | `on_click` | `Option<Callback<()>>` | optional |
 | `children` | `Children` | required |
 
@@ -417,7 +506,8 @@ Multi-line text field (Mantine `Textarea`), bound to `value`.
 
 Same props as `TextInput` where they apply: `disabled`, `on_input`,
 `on_change`, `name`, `required`, `error` (a string, a signal or a
-closure), `mono`, `id`, `aria_label`. `rows` (default 4).
+closure), `mono`, `id`, `aria_label`, `description`, `described_by`,
+`autofocus`, `maxlength`. `rows` (default 4).
 
 | Prop | Type | Default |
 |---|---|---|
@@ -434,6 +524,10 @@ closure), `mono`, `id`, `aria_label`. `rows` (default 4).
 | `mono` | `bool` | optional |
 | `id` | `String` | optional |
 | `aria_label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `autofocus` | `bool` | optional |
+| `maxlength` | `Option<u32>` | optional |
 
 ### NumberInput
 
@@ -441,7 +535,8 @@ Numeric field with steppers (Mantine `NumberInput`), bound to an f64 signal.
 
 - `step` (default 1), `min` and `max` (the steppers stop there).
 - `disabled`, `on_change` (runs with the new number), `name`, `required`,
-  `error` (a string, a signal or a closure), `id` (of the `<input>`).
+  `error` (a string, a signal or a closure), `id` (of the `<input>`),
+  `aria_label`, `description`, `described_by`.
 
 | Prop | Type | Default |
 |---|---|---|
@@ -456,6 +551,9 @@ Numeric field with steppers (Mantine `NumberInput`), bound to an f64 signal.
 | `name` | `String` | optional |
 | `required` | `bool` | optional |
 | `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
 
 ### PasswordInput
 
@@ -465,6 +563,9 @@ Password field with a reveal toggle (Mantine `PasswordInput`).
   `"new-password"` on a form that sets one, so a password manager helps.
 - `disabled`, `on_input`, `on_change`, `name`, `required`, `error` (a
   string, a signal or a closure), `id` (of the `<input>`).
+- `aria_label` (the accessible name when there is no visible `label`),
+  `description`, `described_by`, `autofocus`, `maxlength`: as on
+  `TextInput`.
 
 | Prop | Type | Default |
 |---|---|---|
@@ -479,6 +580,11 @@ Password field with a reveal toggle (Mantine `PasswordInput`).
 | `autocomplete` | `String` | optional |
 | `required` | `bool` | optional |
 | `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `autofocus` | `bool` | optional |
+| `maxlength` | `Option<u32>` | optional |
 
 ### SimpleGrid
 
@@ -709,10 +815,23 @@ The app scaffold: a header across the top, a sidebar, and the main area.
 - `contained`: draw the shell as a bordered panel of fixed height (for docs
   and galleries). By default the shell fills the page.
 - `menu_label`: the accessible name of the menu button (default "Menu").
+- `nav_open` (optional): the open state of the drawer, as your own signal.
+  With none, the shell makes one. Either way it is in the context as an
+  `AppShellNav` (`use_app_shell`).
+- `main_id`, `main_class` (optional): the `id` and more classes of the
+  `<main>`. With an id, `<main>` also has `tabindex="-1"`, so a skip link
+  can move focus to it.
+- `skip_link` (optional): the text of a skip link ("Skip to content"). It
+  is the first element of the shell, so it is the first Tab stop, and it
+  shows only when it has focus. It goes to `main_id` (default `"main"`).
+- `breakpoint` (optional): the width in px below which the sidebar is a
+  drawer. Default `APPSHELL_BREAKPOINT` (768).
 
-Below 768px the sidebar leaves the layout. A menu button in the header
-opens it as a drawer from the left. Escape, a click on the scrim, or a click
-on a link closes it, and focus goes back to the menu button.
+Below the breakpoint the sidebar leaves the layout. A menu button in the
+header opens it as a drawer from the left, and the page under it does not
+scroll. Escape, a click on the scrim, or a click on a link closes it, and
+focus goes back to the menu button. When the window gets wider than the
+breakpoint, the drawer closes.
 
 | Prop | Type | Default |
 |---|---|---|
@@ -721,6 +840,11 @@ on a link closes it, and focus goes back to the menu button.
 | `brand` | `Option<ChildrenFn>` | optional |
 | `contained` | `bool` | optional |
 | `menu_label` | `String` | `"Menu"` |
+| `nav_open` | `Option<RwSignal<bool>>` | optional |
+| `main_id` | `String` | optional |
+| `main_class` | `String` | optional |
+| `skip_link` | `String` | optional |
+| `breakpoint` | `Option<u32>` | optional |
 | `children` | `Children` | required |
 
 ### SideNav
@@ -810,6 +934,10 @@ A dialog over the page, open while `open` is true.
 - `on_close` (optional): runs when the person closes the dialog with
   Escape, the scrim or ×.
 
+- `in_place`: render the dialog where the component is. By default it is
+  moved to the end of `<body>` when it opens, so no rule of the page can
+  shrink or clip it.
+
 On open, focus moves into the dialog: to an element with
 `data-autofocus`, else the first control in the body, else the footer.
 Tab and Shift+Tab stay inside. On close, focus goes back to the element
@@ -824,6 +952,7 @@ that had it before.
 | `close_on_scrim` | `bool` | `true` |
 | `locked` | `Signal<bool>` | optional |
 | `on_close` | `Option<Callback<()>>` | optional |
+| `in_place` | `bool` | optional |
 | `children` | `ChildrenFn` | required |
 
 ### Drawer
@@ -843,6 +972,7 @@ Same props and keyboard behaviour as `Modal`. `size`: `"sm"` (360px),
 | `close_on_scrim` | `bool` | `true` |
 | `locked` | `Signal<bool>` | optional |
 | `on_close` | `Option<Callback<()>>` | optional |
+| `in_place` | `bool` | optional |
 | `children` | `ChildrenFn` | required |
 
 ### ConfirmDialog
@@ -867,6 +997,13 @@ A confirmation for an action that destroys or changes data.
 - `notice` (optional): content between the message and the impacts list,
   such as a warning that must be read before the list.
 - children (optional): more content under the list (an error, a preview).
+- `initial_focus`: the button that has focus when the dialog opens,
+  `"cancel"` (default) or `"confirm"`. With `confirm_text`, the text field
+  has it.
+- `alert`: `role="alertdialog"`, for a question the person must answer
+  now; the message is its description, and a click on the scrim does not
+  close it (AURORA-T-0013 item 17).
+- `in_place`: as on `Modal`.
 
 | Prop | Type | Default |
 |---|---|---|
@@ -885,6 +1022,9 @@ A confirmation for an action that destroys or changes data.
 | `on_cancel` | `Option<Callback<()>>` | optional |
 | `notice` | `Option<ChildrenFn>` | optional |
 | `children` | `Option<ChildrenFn>` | optional |
+| `initial_focus` | `String` | `"cancel"` |
+| `alert` | `bool` | optional |
+| `in_place` | `bool` | optional |
 
 ### ToastStack
 
@@ -895,8 +1035,13 @@ The stack of toasts at the bottom right. Mount it once, near the app root.
 - `toaster` (optional): the queue to show. By default the one in the
   context; if there is none, the stack makes one and provides it.
 
-A click on a toast dismisses it. Errors have `role="alert"`, the others
-`role="status"`. Motion stops when the OS asks for reduced motion.
+A click on a toast dismisses it. Motion stops when the OS asks for reduced
+motion.
+
+Screen readers hear each new toast from two live regions that the stack
+keeps on the page from the start: errors from an assertive one
+(`role="alert"`), the others from a polite one (`role="status"`). A region
+that comes with its text is often not read (AURORA-T-0013 item 15).
 
 | Prop | Type | Default |
 |---|---|---|
@@ -1012,6 +1157,131 @@ A centred card for a sign-in form or a gate state.
 | `brand` | `Option<Children>` | optional |
 | `footer` | `Option<Children>` | optional |
 | `children` | `Children` | required |
+
+## Controls
+
+`use aurora_leptos::components::*;`
+
+### Checkbox
+
+A checkbox, bound to `checked`.
+
+- `label`: the text after the box; a click on it toggles the box.
+- `indeterminate` (optional): shows a dash ("some of them"), for a box
+  that checks a list. A signal or a closure.
+- `description`, `error`, `disabled`, `required`, `name`, `value`, `id`,
+  `aria_label`, `described_by`: as on a text field.
+- `on_change`: runs with the new state.
+
+| Prop | Type | Default |
+|---|---|---|
+| `checked` | `RwSignal<bool>` | required |
+| `label` | `String` | optional |
+| `indeterminate` | `Signal<bool>` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `error` | `Signal<String>` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `required` | `bool` | optional |
+| `name` | `String` | optional |
+| `value` | `String` | optional |
+| `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `on_change` | `Option<Callback<bool>>` | optional |
+
+### FileInput
+
+A file picker: a button that opens the browser's file dialog, and the
+names of the files chosen.
+
+- `accept`: the file types (`".srt,.vtt"`, `"image/*"`).
+- `multiple`: more than one file.
+- `button_label`: the text of the button (default "Choose file").
+- `on_change`: runs with the chosen files.
+- `label`, `description`, `error`, `disabled`, `required`, `name`, `id`,
+  `aria_label`, `described_by`: as on a text field.
+
+The `<input type="file">` is in the page and takes focus; only its look is
+replaced. Its label is `label`, or `aria_label`, or the button text.
+
+| Prop | Type | Default |
+|---|---|---|
+| `label` | `String` | optional |
+| `accept` | `String` | optional |
+| `multiple` | `bool` | optional |
+| `button_label` | `String` | `"Choose file"` |
+| `empty_label` | `String` | `"No file chosen"` |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `error` | `Signal<String>` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `required` | `bool` | optional |
+| `name` | `String` | optional |
+| `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `on_change` | `Option<Callback<Vec<web_sys::File>>>` | optional |
+
+### Slider
+
+A slider (a native range input), bound to `value`.
+
+- `min` (default 0), `max` (default 100), `step` (default 1).
+- `show_value` (default true): the value at the end of the label line.
+  `format` (optional) makes its text ("40%", "2.5 MB/s"); it is also the
+  `aria-valuetext`.
+- `label`, `description`, `disabled`, `name`, `id`, `aria_label`,
+  `described_by`: as on a text field.
+- `on_input`: runs on each move. `on_change`: runs when the person lets go.
+
+| Prop | Type | Default |
+|---|---|---|
+| `value` | `RwSignal<f64>` | required |
+| `min` | `f64` | `0.0` |
+| `max` | `f64` | `100.0` |
+| `step` | `f64` | `1.0` |
+| `show_value` | `bool` | `true` |
+| `format` | `Option<Callback<f64, String>>` | optional |
+| `label` | `String` | optional |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `name` | `String` | optional |
+| `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `on_input` | `Option<Callback<f64>>` | optional |
+| `on_change` | `Option<Callback<f64>>` | optional |
+
+### Combobox
+
+A text field with a list of choices that narrows as the person types (the
+ARIA combobox pattern). `value` holds the value of the chosen choice.
+
+- `options`: `(value, label)` choices. A `Vec`, a signal or a closure.
+- `placeholder`, `empty_text` (default "No matches").
+- `label`, `description`, `error`, `disabled`, `required`, `name`, `id`,
+  `aria_label`, `described_by`: as on a text field.
+- `on_change`: runs with the value of a choice when the person picks it.
+
+ArrowDown and ArrowUp open the list and move through it; Enter picks;
+Escape closes the list, and a second Escape clears the text. When the
+field loses focus the text goes back to the label of the chosen value.
+
+| Prop | Type | Default |
+|---|---|---|
+| `value` | `RwSignal<String>` | required |
+| `options` | `Signal<Vec<(String, String)>>` | required |
+| `label` | `String` | optional |
+| `placeholder` | `String` | optional |
+| `empty_text` | `String` | `"No matches"` |
+| `description` | `Signal<String>` | optional |
+| `described_by` | `String` | optional |
+| `error` | `Signal<String>` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `required` | `bool` | optional |
+| `name` | `String` | optional |
+| `id` | `String` | optional |
+| `aria_label` | `String` | optional |
+| `on_change` | `Option<Callback<String>>` | optional |
 
 ## Data
 
@@ -1273,6 +1543,11 @@ size select, for a list that the server pages with an offset and a limit.
   `PageRange` (for example "Page 3 of 11"). Default:
   `page_range_label` ("41–60 of 212").
 
+- `disabled` (optional): while true, the buttons and the select do nothing.
+- `busy` (optional): while true (a page is loading), the same, and the
+  pager has `aria-busy="true"` and shows a small spinner
+  (AURORA-T-0013 item 18).
+
 A new page size keeps the first item of the page in view.
 
 | Prop | Type | Default |
@@ -1286,6 +1561,8 @@ A new page size keeps the first item of the page in view.
 | `on_change` | `Option<Callback<(usize, usize)>>` | optional |
 | `show_range` | `bool` | `true` |
 | `range_label` | `Option<Callback<PageRange, String>>` | optional |
+| `disabled` | `Signal<bool>` | optional |
+| `busy` | `Signal<bool>` | optional |
 
 ## Widgets
 

@@ -30,15 +30,21 @@ CSS class (`components.css`) styled from the Aurora tokens.
 | `Textarea` | 2 | Multi-line field. |
 | `SegmentedControl` | 2 | Bound to a string signal. |
 | `SimpleGrid` | 2 | Equal-width grid. |
-| `AppShell` | 1 | Page scaffold: header, brand, sidebar (drawer below 768px), main. |
+| `AppShell` | 1 | Page scaffold: header, brand, sidebar (drawer below a breakpoint, 768px by default), main, skip link; `use_app_shell()` reads and closes the drawer. |
 | `Menu` | 1 | Dropdown + `MenuItem` / `MenuLabel` / `MenuDivider`: custom trigger, `align`, `up`, keyboard, Escape and outside click. |
 | `Code` | 1 | Inline monospace chip. |
-| `Loader` | 1 | CSS spinner. |
-| `ActionIcon` | 1 | Icon-only button. |
+| `Loader` | 1 | CSS spinner; sizes xs, sm, md; `label` for a `role="status"`. |
+| `ActionIcon` | 1 | Icon-only button: `aria_label`, `type="button"`, `disabled`. |
 | `CopyButton` | 1 | Clipboard + confirmation (`aria-live`); `icon`, `link`; not there without the Clipboard API. |
 | `Divider` | 1 | Hairline rule. |
 | `List` | 1 | `ul` + `ListItem`. |
 | `Grid` | 1 | 12-col `Grid` + `GridCol`. |
+| `Checkbox` | 0 | Native checkbox; `indeterminate`. |
+| `FileInput` | 0 | Native file input under a styled button; the names of the files. |
+| `Slider` | 0 | Native range input; `format` for the value text. |
+| `Combobox` | 0 | Text field with a list that narrows as the person types (ARIA combobox). |
+| `Disclosure` · `Accordion` | 0 | `<details>` sections; one open at a time in an `Accordion`. |
+| `Skeleton` | 0 | Placeholder shapes while content loads. |
 
 ## Layer 2 — Aurora components + widgets
 Generic Aurora pieces, plus the higher-level data-display **widgets**. The

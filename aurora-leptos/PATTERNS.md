@@ -46,7 +46,8 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | Stack things vertically | `Stack` | `gap`, `center` |
 | Equal-width grid | `SimpleGrid` | `cols=N` |
 | Proportional 12-col grid | `Grid` + `GridCol span=` | when columns differ in width |
-| App scaffold (nav + header + body) | `AppShell` + `SideNav` | fills the page; drawer below 768px |
+| App scaffold (nav + header + body) | `AppShell` + `SideNav` | fills the page; drawer below 768px (`breakpoint`); `skip_link`, `main_id` |
+| Close the drawer on a route change | `use_app_shell()` | `.close()`; or give `AppShell` your own `nav_open` signal |
 | Sidebar links, groups, counts | `SideNav` + `SideNavGroup` + `SideNavLink` | `active` closure sets `aria-current` |
 | Page title + subtitle + actions | `PageHeader` | `back_href`, `meta`, `actions` (or `right`) |
 | Switch between views of one thing | `Tabs` + `TabPanel` | signal tabs, or `href` route tabs |
@@ -56,8 +57,14 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | Inline code / a link | `Code` / `Anchor` | — |
 | A button | `Button` | `variant`, `size`, `bad`, `on_click`; `disabled=move \|\| busy.get()`; `loading` |
 | A button that waits for a request | `Button loading=busy loading_label="Saving…"` | spinner, disabled, `aria-busy` |
-| An icon-only button | `ActionIcon` | give it a `title` |
-| Text / number / password / multiline field | `TextInput` / `NumberInput` / `PasswordInput` / `Textarea` | bind `value` to an `RwSignal`; `name`, `autocomplete`, `required`, `on_change` |
+| An icon-only button | `ActionIcon` | give it an `aria_label` (and a `title` for the tooltip) |
+| Text / number / password / multiline field | `TextInput` / `NumberInput` / `PasswordInput` / `Textarea` | bind `value` to an `RwSignal`; `name`, `autocomplete`, `required`, `on_change`; `description` for a help line |
+| A yes/no in a form, or one of a list | `Checkbox` | `checked: RwSignal<bool>`; `indeterminate` for "some" |
+| Upload a file | `FileInput` | `accept`, `multiple`, `on_change` gets the files |
+| A number in a range | `Slider` | `min`, `max`, `step`, `format` |
+| Pick one of many, by typing | `Combobox` | `options` (value, label); `value` is the chosen value |
+| Sections that open and close | `Disclosure` (one) · `Accordion` (a group) | native `<details>` |
+| A placeholder while content loads | `Skeleton` (shape) · `Loader size="xs"` (inline spinner) | say "loading" another way too |
 | A sign-in form | `CenterScreen` + `AuthCard` + `TextInput input_type="email"` + `PasswordInput autocomplete="current-password"` | a real `<form>` around it |
 | Pick one of a few options | `Select` (many) · `SegmentedControl` (2–4) | `option_pairs` when the text is not the value |
 | An on/off toggle | `Switch` | `checked: RwSignal<bool>` |
@@ -66,7 +73,7 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | A hover explanation | `Tooltip` (keyboard too) · `title=` (a plain hint) | see comparison below |
 | A focused task over the page | `Modal` | `size` sm/md/lg/xl, `footer` |
 | A detail view from the side | `Drawer` | same props as `Modal` |
-| Confirm a destroy / cascade | `ConfirmDialog` | `impacts`, `confirm_text`, `busy` |
+| Confirm a destroy / cascade | `ConfirmDialog` | `impacts`, `confirm_text`, `busy`; `alert` for a question to answer now |
 | Tell the person something happened | `use_toaster().success(…)` | mount one `ToastStack` |
 | A dropdown of actions | `Menu` + `MenuItem` | `trigger` for your own trigger; `align="end"`; `up` |
 | A short status tag | `StatusBadge` (status string) · `Pill` (custom hue) · `HealthPill` (+tooltip) | see comparison below |
@@ -85,7 +92,7 @@ use aurora_leptos::{AuroraStyles, components::*, widgets::*, graph::*, tokens::t
 | An activity or run feed | `FeedList` + `FeedRow` | `at`, `subject`, `status`, `href` / `on_click` |
 | "3m ago" | `RelativeTime` | `at` (ms) or `iso`; `format_duration` for durations |
 | The state of a live stream | `LiveIndicator` | `LiveState::{Live, Connecting, Offline}` |
-| Pages of a long list | `Pagination` | `offset`, `limit`, `total`, `page_sizes` |
+| Pages of a long list | `Pagination` | `offset`, `limit`, `total`, `page_sizes`; `busy` while a page loads |
 | An icon | `IconPlay`, `IconCopy`, ... | `size`, `title` |
 | A freshness / progress bar | `Meter` | `value` 0–100; `indeterminate` for work of unknown length |
 | Build/CI status | `BuildStatusBadge` | success/building/failed/pending |
@@ -145,7 +152,7 @@ Key props only — see rustdoc for the full signatures.
 `Card{href,on_click,title,label,selected}`.
 
 ### Frame
-`AppShell{header?, navbar?, brand?, contained, menu_label}` ·
+`AppShell{header?, navbar?, brand?, contained, menu_label, nav_open, main_id, main_class, skip_link, breakpoint}` + `use_app_shell()` ·
 `SideNav{label, footer?}` · `SideNavGroup{label}` ·
 `SideNavLink{href, active, count, count_color, marker, icon?, on_click}` ·
 `PageHeader{title, sub, back_href, back_label, meta?, actions?, right?}` ·
@@ -175,8 +182,13 @@ view! {
 ```
 
 `AppShell` fills the page. With no `header`, the `brand` shows at the top of
-the sidebar; with a `header`, it shows in the header. Below 768px the sidebar
-is a drawer behind a menu button (Escape, the scrim or a link closes it).
+the sidebar; with a `header`, it shows in the header. Below 768px (or
+`breakpoint`) the sidebar is a drawer behind a menu button (Escape, the scrim
+or a link closes it, and so does a wider window); the page under it does not
+scroll. `use_app_shell()` gives the drawer to any component inside the shell:
+close it on a route change with `use_app_shell().map(|n| n.close())`.
+`skip_link="Skip to content"` adds a skip link as the first Tab stop; it goes
+to `<main id="main">` (or `main_id`).
 
 ### Typography
 `Text{size,dimmed,bright,bold,mono}` · `Code` · `Anchor{href}` ·
@@ -185,17 +197,21 @@ is a drawer behind a menu button (Escape, the scrim or a link closes it).
 
 ### Inputs (bind `value`/`checked` to an `RwSignal`)
 `Button{variant,size,bad,disabled,loading,loading_label,button_type,href,title,aria_label,stop_propagation,on_click}` ·
-`ActionIcon{title,on_click}` ·
-`TextInput{label,placeholder,value,error,input_type,disabled,on_input,on_change,name,autocomplete,required,spellcheck,mono,id,aria_label}` ·
-`Textarea{…,rows,mono,id,aria_label}` · `PasswordInput{…,autocomplete,id}` ·
-`NumberInput{label,value:RwSignal<f64>,step,min,max,disabled,on_change,name,required,error,id}` ·
-`Select{label,options,option_pairs,value,placeholder,disabled,on_change,name,required,error,id,aria_label}` ·
+`ActionIcon{aria_label,title,disabled,button_type,on_click}` ·
+`TextInput{label,placeholder,value,error,input_type,disabled,on_input,on_change,name,autocomplete,required,spellcheck,mono,id,aria_label,description,described_by,autofocus,maxlength,min,max,step}` ·
+`Textarea{…,rows,mono,id,aria_label,maxlength}` · `PasswordInput{…,autocomplete,id,aria_label,maxlength}` ·
+`NumberInput{label,value:RwSignal<f64>,step,min,max,disabled,on_change,name,required,error,id,aria_label,description}` ·
+`Select{label,options,option_pairs,value,placeholder,disabled,on_change,name,required,error,id,aria_label,description,autofocus}` ·
 `Switch{checked,label,disabled,on_change}` · `SegmentedControl{options,value}` ·
-`CopyButton{value,icon,link,label,copied_label,on_copy}`.
+`CopyButton{value,icon,link,label,copied_label,on_copy}` ·
+`Checkbox{checked,label,indeterminate,…}` · `FileInput{label,accept,multiple,on_change}` ·
+`Slider{value:RwSignal<f64>,min,max,step,format}` · `Combobox{value,options,label,placeholder}`.
 
 `disabled` takes a `bool`, a signal or a closure, so it changes with the
 state: `disabled=move || busy.get() || name.get().is_empty()`. `error` of an
-input works the same way (`error=move || problem.get()`). An attribute
+input works the same way (`error=move || problem.get()`), and so do
+`description`, the `options` of a `Select`, the `count` of a `Chip` and the
+`title` and `aria_label` of a `Button`. An attribute
 with no prop goes on the root element with `attr:`
 (`<Button attr:data-testid="save">`); on an input, that root is the wrapper
 `<div>`, so use `aria_label` and `id` for the control itself.
@@ -207,11 +223,15 @@ view! { <TextInput label="Name" value=name placeholder="e.g. nightly" /> }
 
 ### Overlays & feedback
 `Tooltip{label,position,focusable}` · `Modal{open,title,size,footer?,close_on_scrim,locked,on_close}` ·
-`Drawer{…same}` · `ConfirmDialog{open,title,message,notice?,impacts,confirm_text,confirm_label,danger,busy,on_confirm,on_cancel}` ·
+`Drawer{…same}` · `ConfirmDialog{open,title,message,notice?,impacts,confirm_text,confirm_label,danger,busy,initial_focus,alert,on_confirm,on_cancel}` ·
 `ToastStack{duration_ms}` + `provide_toaster()` / `use_toaster()` ·
 `Menu{label,trigger?,trigger_class,aria_label,align,up,open}` + `MenuItem{on_click,href,disabled,danger}` + `MenuLabel` + `MenuDivider` ·
 `SecretReveal{secret,label,warning,done_label,on_done}` · `CenterScreen{contained}` + `AuthCard{title,sub,brand?,footer?}` ·
-`Alert{title,color}` · `Loader`.
+`Alert{title,color}` · `Loader{size,label}` · `Skeleton{width,height,lines,circle}` ·
+`Disclosure{title,open,default_open}` + `Accordion{multiple}`.
+
+A dialog moves to the end of `<body>` when it opens, so no rule of the page
+reaches it; `in_place=true` keeps it where it is.
 
 Dialogs move focus in on open (to `data-autofocus`, else the first control),
 keep Tab inside, close on Escape, and give focus back to the opener.

@@ -11,6 +11,18 @@ use leptos::prelude::*;
 
 use crate::Section;
 
+/// Closes the drawer of the shell above it (`use_app_shell`).
+#[component]
+fn CloseDrawer() -> impl IntoView {
+    let nav = use_app_shell().expect("inside an AppShell");
+    view! {
+        <Text size="sm" dimmed=true>
+            {move || if nav.is_open() { "Drawer: open " } else { "Drawer: closed " }}
+            <Button variant="subtle" size="xs" on_click=Callback::new(move |_| nav.close())>"Close it from the page"</Button>
+        </Text>
+    }
+}
+
 /// The app's own brand mark (the pack ships no branding).
 #[component]
 fn DemoBrand(#[prop(into)] name: String) -> impl IntoView {
@@ -90,6 +102,7 @@ pub fn FrameSections() -> impl IntoView {
     let del_open = RwSignal::new(false);
     let del_busy = RwSignal::new(false);
     let arch_open = RwSignal::new(false);
+    let stop_open = RwSignal::new(false);
 
     // Tabs.
     let tab = RwSignal::new(String::from("overview"));
@@ -134,8 +147,11 @@ pub fn FrameSections() -> impl IntoView {
                         </Group>
                     }.into_any())
                     navbar=Box::new(move || view! { <DemoNav route=route_b /> }.into_any())
+                    skip_link="Skip to content"
+                    main_id="demo-main"
                 >
-                    <PageHeader title="Workflows" sub="brand + content in the header" />
+                    <PageHeader title="Workflows" sub="brand + content in the header · Tab once for the skip link" />
+                    <CloseDrawer />
                     <Text dimmed=true size="sm">{move || format!("Active link: {}", route_b.get())}</Text>
                 </AppShell>
             </Stack>
@@ -237,8 +253,18 @@ pub fn FrameSections() -> impl IntoView {
             <Group wrap=true gap="sm">
                 <Button bad=true on_click=Callback::new(move |_| del_open.set(true))>"Delete workflow…"</Button>
                 <Button variant="default" on_click=Callback::new(move |_| arch_open.set(true))>"Archive board…"</Button>
+                <Button variant="default" on_click=Callback::new(move |_| stop_open.set(true))>"Stop server… (alert)"</Button>
             </Group>
         </Section>
+        <ConfirmDialog
+            open=stop_open
+            title="Stop the server?"
+            message="Every stream ends now."
+            confirm_label="Stop"
+            alert=true
+            initial_focus="confirm"
+            on_confirm=Callback::new(move |_| stop_open.set(false))
+        />
         <ConfirmDialog
             open=del_open
             title="Delete workflow?"

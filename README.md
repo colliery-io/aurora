@@ -34,6 +34,7 @@ aurora-leptos/       # ★ the design-system crate (published as colliery-io-aur
     frame.rs         #   AppShell, SideNav, PageHeader, Modal, Drawer,
                      #   ConfirmDialog, toasts, Tabs, Card, SecretReveal,
                      #   CenterScreen, AuthCard
+    controls.rs      #   Checkbox, FileInput, Slider, Combobox
     data.rs          #   StatTile, Sparkline, SegmentedBar, DetailList,
                      #   SectionLabel, CodeBlock, LogView, FeedList,
                      #   Pagination, RelativeTime, LiveIndicator

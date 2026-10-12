@@ -250,6 +250,7 @@ const MODULES = [
 	{ file: 'src/theme.rs', title: 'Theme', use: 'aurora_leptos::theme::ThemeToggle' },
 	{ file: 'src/components.rs', title: 'Primitives', use: 'aurora_leptos::components::*' },
 	{ file: 'src/frame.rs', title: 'Frame', use: 'aurora_leptos::components::*' },
+	{ file: 'src/controls.rs', title: 'Controls', use: 'aurora_leptos::components::*' },
 	{ file: 'src/data.rs', title: 'Data', use: 'aurora_leptos::components::*' },
 	{ file: 'src/widgets.rs', title: 'Widgets', use: 'aurora_leptos::widgets::*' },
 	{ file: 'src/graph.rs', title: 'Graph', use: 'aurora_leptos::graph::*' },
