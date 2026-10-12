@@ -35,16 +35,19 @@ use crate::{Graph, GraphEdge, GraphNode, Meter};
 
 /// The stylesheet a Hlin front end needs to draw with this pack.
 ///
-/// Aurora's own CSS unchanged, then the little that belongs to Hlin: the two
-/// charts drawn here rather than by a component, the aged treatment, and the
-/// mapping onto the custom properties Hlin's own chrome reads so the frame
-/// around the panels follows the same theme.
+/// Aurora's own CSS unchanged ([`crate::AURORA_CSS`], with the graph chrome for
+/// `aurora.graph`), then the little that belongs to Hlin: the two charts drawn
+/// here rather than by a component, the aged treatment, and the mapping onto
+/// the custom properties Hlin's own chrome reads so the frame around the panels
+/// follows the same theme.
 pub const HLIN_CSS: &str = concat!(
     include_str!("../style/fonts.css"),
     "\n",
     include_str!("../style/tokens.css"),
     "\n",
     include_str!("../style/components.css"),
+    "\n",
+    include_str!("../style/graph.css"),
     "\n",
     include_str!("hlin.css"),
 );

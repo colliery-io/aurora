@@ -66,7 +66,7 @@ generic names in the flat crates.io namespace); the library is still imported as
 
 ```toml
 [dependencies]
-colliery-io-aurora = "0.4"
+colliery-io-aurora = "0.5"
 leptos = { version = "0.8", features = ["csr"] }   # match 0.8.x; binary picks the renderer
 ```
 
@@ -109,7 +109,7 @@ leptos for the host.
   publish = false
 
   [dependencies]
-  colliery-io-aurora = { version = "0.4", default-features = false }
+  colliery-io-aurora = { version = "0.5", default-features = false }
   ```
   ```rust
   // tools/aurora-css/src/main.rs
@@ -270,8 +270,8 @@ Aurora that design system.
 
 ```toml
 [dependencies]
-colliery-io-aurora = { version = "0.1", features = ["hlin"] }
-hlin-ui = "0.0.1"
+colliery-io-aurora = { version = "0.5", features = ["hlin"] }
+hlin-ui = "0.1"
 leptos = { version = "0.8", features = ["csr"] }
 ```
 
@@ -286,7 +286,7 @@ fn main() {
 ```
 
 That is a whole Hlin front end. `AuroraPack` implements Hlin's `DesignPack`
-trait — ten methods, no defaults, so a pack that forgets a view kind does not
+trait — thirteen methods, no defaults, so a pack that forgets a view kind does not
 compile — and draws panels out of Aurora's own components, tokens and widgets
 rather than a second set that happens to look similar.
 
@@ -294,7 +294,9 @@ The feature is additive and off by default. With it off this crate does not
 know Hlin exists, compiles no extra dependency, and nothing about the default
 build changes.
 
-`HLIN_CSS` carries the chrome the pack needs on top of `AURORA_CSS`.
+`HLIN_CSS` is the pack's stylesheet: `AURORA_CSS` (with the graph chrome)
+and the chrome the pack adds. `DesignPack::stylesheet` returns it, so the
+shell puts it on the page.
 
 ## Build & run the gallery
 ```

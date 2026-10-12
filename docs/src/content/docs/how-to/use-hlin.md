@@ -34,7 +34,7 @@ own components and tokens.
    ```
 
 That is the whole front end. The pack gives Hlin its stylesheet,
-`aurora_leptos::HLIN_CSS`: the Aurora fonts, tokens and component styles, and
+`aurora_leptos::HLIN_CSS`: the Aurora fonts, tokens, component and graph styles, and
 the few styles that the pack adds for Hlin.
 
 ## What the feature changes
