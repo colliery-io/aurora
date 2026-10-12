@@ -370,12 +370,7 @@ pub fn Combobox(
 
     let active_id = {
         let option_id = option_id.clone();
-        move || {
-            open.get()
-                .then(|| active.get())
-                .flatten()
-                .map(&option_id)
-        }
+        move || open.get().then(|| active.get()).flatten().map(&option_id)
     };
 
     let list = {

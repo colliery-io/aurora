@@ -1009,8 +1009,10 @@ pub fn LogView(
     let scroller = NodeRef::<html::Div>::new();
     let following = RwSignal::new(follow);
     let scroll_to_end = move || {
+        // The frame can come after the view is gone: `try_`, or the read of
+        // a disposed node panics (AURORA-T-0014).
         request_animation_frame(move || {
-            if let Some(el) = scroller.get_untracked() {
+            if let Some(el) = scroller.try_get_untracked().flatten() {
                 el.set_scroll_top(el.scroll_height());
             }
         });

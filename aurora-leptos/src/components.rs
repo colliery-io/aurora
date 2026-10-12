@@ -1484,8 +1484,9 @@ pub fn Menu(
     Effect::new(move |_| {
         if open.get() {
             if let Some(first) = focus_on_open.try_update_value(|v| v.take()).flatten() {
+                // The frame can come after the menu is gone (AURORA-T-0014).
                 request_animation_frame(move || {
-                    if let Some(list) = list_ref.get_untracked() {
+                    if let Some(list) = list_ref.try_get_untracked().flatten() {
                         let items = menu_items(&list);
                         let pick = if first { items.first() } else { items.last() };
                         if let Some(el) = pick {

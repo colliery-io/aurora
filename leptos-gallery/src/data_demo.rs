@@ -82,6 +82,9 @@ pub fn DataSections() -> impl IntoView {
         lines.update(|v| v.extend((start..start + k).map(make_line)));
         log_seq.set(start + k);
     };
+    // Rebuilding the log while lines arrive, as a panel that is redrawn on
+    // each read does (AURORA-T-0014).
+    let rebuilds = RwSignal::new(0u32);
     let streaming = RwSignal::new(false);
     let stream_handle = StoredValue::new(None::<IntervalHandle>);
     Effect::new(move |_| {
@@ -259,11 +262,18 @@ pub fn DataSections() -> impl IntoView {
             <div class="gallery-two" id="demo-logs">
                 <CodeBlock max_height="220px" label="Deployment manifest" code="apiVersion: brokkr.io/v1\nkind: Stack\nmetadata:\n  name: orders-rollup\n  labels:\n    tier: gold\nspec:\n  replicas: 3\n  image: registry.colliery.io/orders-rollup:2026.09.30-7f3a01-a-very-long-tag-that-scrolls-sideways\n  env:\n    - name: RUST_LOG\n      value: info\n" />
                 <Stack gap="xs">
-                    <LogView lines=lines max_height="220px" label="Execution events" />
+                    {move || {
+                        rebuilds.track();
+                        view! { <LogView lines=lines max_height="220px" label="Execution events" /> }
+                    }}
                     <Group gap="sm">
                         <Button size="xs" variant="default" on_click=Callback::new(move |_| add_lines(5))>"Add 5 lines"</Button>
                         <Switch checked=streaming label="Stream" />
                         <Button size="xs" variant="subtle" on_click=Callback::new(move |_| lines.set(Vec::new()))>"Clear"</Button>
+                        <Button size="xs" variant="subtle" on_click=Callback::new(move |_| {
+                            add_lines(1);
+                            rebuilds.update(|n| *n += 1);
+                        })>"Add a line and rebuild"</Button>
                     </Group>
                 </Stack>
             </div>

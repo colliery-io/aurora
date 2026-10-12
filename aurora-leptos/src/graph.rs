@@ -272,6 +272,8 @@ pub fn Dag(
             h.clear();
         }
     };
+    // A select still waiting when the graph goes does not run (AURORA-T-0014).
+    on_cleanup(cancel_pending);
     let mut neighbours: HashMap<String, HashSet<String>> = HashMap::new();
     for e in &geometry.edges {
         neighbours
