@@ -67,7 +67,7 @@ generic names in the flat crates.io namespace); the library is still imported as
 
 ```toml
 [dependencies]
-colliery-io-aurora = "0.5"
+colliery-io-aurora = "0.6"
 leptos = { version = "0.8", features = ["csr"] }   # match 0.8.x; binary picks the renderer
 ```
 
@@ -110,7 +110,7 @@ leptos for the host.
   publish = false
 
   [dependencies]
-  colliery-io-aurora = { version = "0.5", default-features = false }
+  colliery-io-aurora = { version = "0.6", default-features = false }
   ```
   ```rust
   // tools/aurora-css/src/main.rs
@@ -140,7 +140,7 @@ leptos for the host.
   version that the app uses:
   ```toml
   # Trunk.toml — install the helper once:
-  #   cargo install colliery-io-aurora --locked --version 0.5.0 --no-default-features --features bin
+  #   cargo install colliery-io-aurora --locked --version 0.6.0 --no-default-features --features bin
   [[hooks]]
   stage = "pre_build"
   command = "aurora-css"
@@ -271,7 +271,7 @@ Aurora that design system.
 
 ```toml
 [dependencies]
-colliery-io-aurora = { version = "0.5", features = ["hlin"] }
+colliery-io-aurora = { version = "0.6", features = ["hlin"] }
 hlin-ui = "0.1"
 leptos = { version = "0.8", features = ["csr"] }
 ```

@@ -38,7 +38,7 @@ Open `Cargo.toml`. Set `[dependencies]` to this:
 
 ```toml
 [dependencies]
-colliery-io-aurora = "0.5"
+colliery-io-aurora = "0.6"
 leptos = { version = "0.8", features = ["csr"] }
 ```
 
