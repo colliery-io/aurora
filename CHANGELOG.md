@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.1
+
+A patch release with the repair of AURORA-T-0014. Nothing is removed or
+renamed.
+
+- `LogView` no longer panics when it is removed while a frame callback is
+  pending (found by Brokkr: a logs panel rebuilt on each read). The callback
+  reads its element with `try_get_untracked`. `Menu` had the same read in its
+  focus callback, and has the same repair.
+- `Dag` cancels a pending select (the wait for a second click) when it goes.
+- `tests/aurora_t_0014.rs` checks that no frame callback reads a node or a
+  signal with a read that panics. The gallery's LogView has an "Add a line
+  and rebuild" button: before the repair each click panicked.
+
+Brokkr can rebuild its logs panel freely again.
+
 ## 0.6.0
 
 The repairs of AURORA-T-0013, the defects that the Skadi migration to 0.5.0
