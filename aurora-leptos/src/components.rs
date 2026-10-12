@@ -17,6 +17,8 @@ pub use crate::frame::*;
 // the icons in `icons.rs`; both are part of this module's API.
 pub use crate::data::*;
 pub use crate::icons::*;
+// Checkbox, FileInput, Slider and Combobox live in `controls.rs`.
+pub use crate::controls::*;
 
 /// A unique `id` for one field instance, so a `<label for=…>` can point at its
 /// control.
@@ -142,7 +144,7 @@ pub fn Text(
 
 /// `Some(s)` when `s` is not empty: an attribute that is left out when the
 /// prop is not given.
-fn attr(s: String) -> Option<String> {
+pub(crate) fn attr(s: String) -> Option<String> {
     (!s.is_empty()).then_some(s)
 }
 
@@ -159,7 +161,8 @@ fn attr(s: String) -> Option<String> {
 ///   default, so a button in a `<form>` submits it, as before.
 /// - `href`: draws a link (`<a>`) that looks like the button.
 /// - `title`, `aria_label`: the tooltip and the accessible name (give
-///   `aria_label` when the children are only an icon).
+///   `aria_label` when the children are only an icon). A `String`, a signal
+///   or a closure, so they can change (AURORA-T-0013 item 13).
 /// - `stop_propagation`: the click does not go on to a parent (a button in
 ///   a clickable table row or card).
 #[component]
@@ -172,12 +175,14 @@ pub fn Button(
     #[prop(optional, into)] loading_label: String,
     #[prop(optional, into)] button_type: String,
     #[prop(optional, into)] href: String,
-    #[prop(optional, into)] title: String,
-    #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] title: Signal<String>,
+    #[prop(optional, into)] aria_label: Signal<String>,
     #[prop(optional)] stop_propagation: bool,
     #[prop(optional)] on_click: Option<Callback<()>>,
     children: Children,
 ) -> impl IntoView {
+    let title = move || attr(title.get());
+    let aria_label = move || attr(aria_label.get());
     let variant = match variant.as_str() {
         "primary" | "" => "filled".to_string(),
         _ => variant,
@@ -215,8 +220,8 @@ pub fn Button(
             <a
                 class=class
                 href=href
-                title=attr(title)
-                aria-label=attr(aria_label)
+                title=title
+                aria-label=aria_label
                 aria-disabled=move || off().then_some("true")
                 aria-busy=move || loading.get().then_some("true")
                 tabindex=move || off().then_some("-1")
@@ -231,8 +236,8 @@ pub fn Button(
         <button
             class=class
             type=attr(button_type)
-            title=attr(title)
-            aria-label=attr(aria_label)
+            title=title
+            aria-label=aria_label
             disabled=off
             aria-busy=move || if loading.get() { "true" } else { "false" }
             on:click=click
@@ -249,7 +254,7 @@ pub fn Button(
 
 /// The id of a control: the `id` prop when a product gives one (so a label
 /// outside the component can point at it), else a new unique id.
-fn control_id(id: String) -> String {
+pub(crate) fn control_id(id: String) -> String {
     if id.is_empty() {
         field_id()
     } else {
@@ -259,13 +264,80 @@ fn control_id(id: String) -> String {
 
 /// The message under a field, while `error` is not empty. `error` is a
 /// signal, so the message can come and go (AURORA-T-0007 item 12).
-fn field_error(error: Signal<String>, err_id: String) -> impl IntoView {
+pub(crate) fn field_error(error: Signal<String>, err_id: String) -> impl IntoView {
     move || {
         let e = error.get();
         (!e.is_empty()).then(|| {
             view! { <span class="cl-field__error" id=err_id.clone()>{e}</span> }
         })
     }
+}
+
+/// The label of a field, with a mark when the field is required. The mark is
+/// for the eye; a screen reader hears "required" from the control.
+pub(crate) fn field_label(label: String, id: String, required: bool) -> impl IntoView {
+    (!label.is_empty()).then(|| {
+        view! {
+            <label class="cl-field__label" for=id>
+                {label}
+                {required.then(|| view! { <span class="cl-field__required" aria-hidden="true">" *"</span> })}
+            </label>
+        }
+    })
+}
+
+/// The help line under a field, while `description` is not empty.
+pub(crate) fn field_help(description: Signal<String>, help_id: String) -> impl IntoView {
+    move || {
+        let d = description.get();
+        (!d.is_empty())
+            .then(|| view! { <span class="cl-field__help" id=help_id.clone()>{d}</span> })
+    }
+}
+
+/// The `aria-describedby` of a control: its help line, the ids a product
+/// gives (`described_by`), and its error message, the ones that are shown.
+/// `None` when there are none (AURORA-T-0013 item 9).
+pub(crate) fn describedby(
+    id: &str,
+    description: Signal<String>,
+    described_by: String,
+    error: Signal<String>,
+) -> impl Fn() -> Option<String> + Clone + Send + Sync + 'static {
+    let help_id = format!("{id}-help");
+    let err_id = format!("{id}-error");
+    move || {
+        let mut ids: Vec<&str> = Vec::new();
+        let has_help = description.with(|d| !d.is_empty());
+        let has_error = error.with(|e| !e.is_empty());
+        if has_help {
+            ids.push(&help_id);
+        }
+        if !described_by.is_empty() {
+            ids.push(&described_by);
+        }
+        if has_error {
+            ids.push(&err_id);
+        }
+        (!ids.is_empty()).then(|| ids.join(" "))
+    }
+}
+
+/// Focuses a control when it is mounted, for `autofocus`. (The HTML attribute
+/// alone does nothing on an element that a script adds after the page loads.)
+pub(crate) fn focus_on_mount<E>(node: NodeRef<E>)
+where
+    E: leptos::html::ElementType,
+    E::Output: leptos::wasm_bindgen::JsCast + Clone + 'static,
+{
+    Effect::new(move |_| {
+        if let Some(el) = node.get() {
+            use leptos::wasm_bindgen::JsCast;
+            if let Some(el) = el.dyn_ref::<web_sys::HtmlElement>() {
+                let _ = el.focus();
+            }
+        }
+    });
 }
 
 /// A one-line text field, bound to `value`.
@@ -285,6 +357,12 @@ fn field_error(error: Signal<String>, err_id: String) -> impl IntoView {
 /// - `name`, `autocomplete`, `required`, `spellcheck`: the HTML attributes
 ///   (for forms and password managers).
 /// - `mono`: the text in the mono font (ids, codes).
+/// - `description`: a help line under the field, linked to it with
+///   `aria-describedby`. A `String`, a signal or a closure.
+/// - `described_by`: more ids for `aria-describedby` (a help text elsewhere).
+/// - `required` also marks the label with `*`.
+/// - `autofocus`: focus the field when it is mounted.
+/// - `maxlength`, `min`, `max`, `step`: the HTML attributes.
 #[component]
 pub fn TextInput(
     #[prop(optional, into)] label: String,
@@ -302,6 +380,13 @@ pub fn TextInput(
     #[prop(optional)] mono: bool,
     #[prop(optional, into)] id: String,
     #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] description: Signal<String>,
+    #[prop(optional, into)] described_by: String,
+    #[prop(optional)] autofocus: bool,
+    #[prop(optional)] maxlength: Option<u32>,
+    #[prop(optional, into)] min: String,
+    #[prop(optional, into)] max: String,
+    #[prop(optional, into)] step: String,
 ) -> impl IntoView {
     let mut input_class = String::from("cl-input");
     if mono {
@@ -312,29 +397,36 @@ pub fn TextInput(
     } else {
         input_type
     };
-    let has_label = !label.is_empty();
     let has_error = move || error.with(|e| !e.is_empty());
     let id = control_id(id);
     let err_id = format!("{id}-error");
-    let described = err_id.clone();
+    let described = describedby(&id, description, described_by, error);
+    let node = NodeRef::<leptos::html::Input>::new();
+    if autofocus {
+        focus_on_mount(node);
+    }
     view! {
         <div class="cl-field">
-            {has_label.then(|| view! {
-                <label class="cl-field__label" for=id.clone()>{label}</label>
-            })}
+            {field_label(label, id.clone(), required)}
             <input
+                node_ref=node
                 class=input_class
                 class:cl-input--error=has_error
-                id=id
+                id=id.clone()
                 type=input_type
                 placeholder=attr(placeholder)
                 name=attr(name)
                 autocomplete=attr(autocomplete)
                 aria-label=attr(aria_label)
                 required=required
+                autofocus=autofocus
+                maxlength=maxlength
+                min=attr(min)
+                max=attr(max)
+                step=attr(step)
                 spellcheck=spellcheck.map(|s| if s { "true" } else { "false" })
                 aria-invalid=move || has_error().then_some("true")
-                aria-describedby=move || has_error().then(|| described.clone())
+                aria-describedby=described
                 disabled=move || disabled.get()
                 prop:value=move || value.get()
                 on:input=move |e| {
@@ -346,6 +438,7 @@ pub fn TextInput(
                     if let Some(cb) = on_change { cb.run(event_target_value(&e)); }
                 }
             />
+            {field_help(description, format!("{id}-help"))}
             {field_error(error, err_id)}
         </div>
     }
@@ -378,6 +471,10 @@ pub fn select_shown_value(value: &str, options: &[String], has_placeholder: bool
 ///   component. Default: a unique id.
 /// - `disabled`, `on_change` (runs with the new value), `name`, `required`,
 ///   `error` (a `String`, a `&str`, a signal or a closure).
+/// - `description`, `described_by`, `autofocus`: as on [`TextInput`].
+///
+/// `options` and `option_pairs` take a `Vec`, a signal or a closure: when
+/// they change, the select shows the new choices (AURORA-T-0013 item 11).
 ///
 /// When `value` matches no option and there is no placeholder, the select
 /// shows the first option, as a native select does. `value` itself is not
@@ -385,8 +482,8 @@ pub fn select_shown_value(value: &str, options: &[String], has_placeholder: bool
 #[component]
 pub fn Select(
     #[prop(optional, into)] label: String,
-    #[prop(optional)] options: Vec<String>,
-    #[prop(optional)] option_pairs: Vec<(String, String)>,
+    #[prop(optional, into)] options: Signal<Vec<String>>,
+    #[prop(optional, into)] option_pairs: Signal<Vec<(String, String)>>,
     value: RwSignal<String>,
     #[prop(optional, into)] placeholder: String,
     #[prop(optional, into)] disabled: Signal<bool>,
@@ -396,47 +493,59 @@ pub fn Select(
     #[prop(optional, into)] error: Signal<String>,
     #[prop(optional, into)] id: String,
     #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] description: Signal<String>,
+    #[prop(optional, into)] described_by: String,
+    #[prop(optional)] autofocus: bool,
 ) -> impl IntoView {
-    let has_label = !label.is_empty();
     let has_error = move || error.with(|e| !e.is_empty());
-    let pairs = options
-        .into_iter()
-        .map(|o| (o.clone(), o))
-        .chain(option_pairs)
-        .collect::<Vec<_>>();
+    let pairs = Memo::new(move |_| {
+        let mut all: Vec<(String, String)> =
+            options.get().into_iter().map(|o| (o.clone(), o)).collect();
+        all.extend(option_pairs.get());
+        all
+    });
     let has_placeholder = !placeholder.is_empty();
-    let values = StoredValue::new(pairs.iter().map(|(v, _)| v.clone()).collect::<Vec<_>>());
     let shown = Memo::new(move |_| {
-        values.with_value(|vs| select_shown_value(&value.get(), vs, has_placeholder))
+        pairs.with(|ps| {
+            let values: Vec<String> = ps.iter().map(|(v, _)| v.clone()).collect();
+            select_shown_value(&value.get(), &values, has_placeholder)
+        })
     });
     let placeholder_opt = has_placeholder
         .then(|| view! { <option value="" selected=move || shown.get().is_empty()>{placeholder}</option> });
-    let opts = pairs
-        .into_iter()
-        .map(|(v, l)| {
-            let sel = v.clone();
-            // `selected` as well as `prop:value` on the select: the value is
-            // right on the first render, before the options exist.
-            view! { <option value=v selected=move || shown.with(|s| *s == sel)>{l}</option> }
-        })
-        .collect_view();
+    let opts = move || {
+        pairs
+            .get()
+            .into_iter()
+            .map(|(v, l)| {
+                let sel = v.clone();
+                // `selected` as well as `prop:value` on the select: the value
+                // is right on the first render, before the options exist.
+                view! { <option value=v selected=move || shown.with(|s| *s == sel)>{l}</option> }
+            })
+            .collect_view()
+    };
     let id = control_id(id);
     let err_id = format!("{id}-error");
-    let described = err_id.clone();
+    let described = describedby(&id, description, described_by, error);
+    let node = NodeRef::<leptos::html::Select>::new();
+    if autofocus {
+        focus_on_mount(node);
+    }
     view! {
         <div class="cl-field">
-            {has_label.then(|| view! {
-                <label class="cl-field__label" for=id.clone()>{label}</label>
-            })}
+            {field_label(label, id.clone(), required)}
             <select
+                node_ref=node
                 class="cl-input cl-select"
                 class:cl-input--error=has_error
-                id=id
+                id=id.clone()
                 name=attr(name)
                 aria-label=attr(aria_label)
                 required=required
+                autofocus=autofocus
                 aria-invalid=move || has_error().then_some("true")
-                aria-describedby=move || has_error().then(|| described.clone())
+                aria-describedby=described
                 disabled=move || disabled.get()
                 prop:value=move || shown.get()
                 on:change=move |e| {
@@ -448,6 +557,7 @@ pub fn Select(
                 {placeholder_opt}
                 {opts}
             </select>
+            {field_help(description, format!("{id}-help"))}
             {field_error(error, err_id)}
         </div>
     }
@@ -567,14 +677,16 @@ pub fn Panel(
 
 /// A filter chip: a toggle button.
 ///
-/// - `label`, `count` (shown when 0 or more), `active`, `on_click`.
+/// - `label`, `count` (shown when 0 or more), `active`, `on_click`. `count`
+///   takes a number, a signal or a closure, so a live count updates
+///   (AURORA-T-0013 item 10).
 ///
 /// It is a `type="button"` (it does not submit a form) with `aria-pressed`
 /// from `active`, so a screen reader says whether the filter is on.
 #[component]
 pub fn Chip(
     #[prop(into)] label: String,
-    #[prop(default = -1)] count: i32,
+    #[prop(default = Signal::stored(-1), into)] count: Signal<i32>,
     #[prop(into)] active: Signal<bool>,
     #[prop(optional)] on_click: Option<Callback<()>>,
 ) -> impl IntoView {
@@ -587,7 +699,10 @@ pub fn Chip(
             on:click=move |_| { if let Some(cb) = on_click { cb.run(()); } }
         >
             {label}
-            {(count >= 0).then(|| view! { <span class="cl-chip__count">{count}</span> })}
+            {move || {
+                let n = count.get();
+                (n >= 0).then(|| view! { <span class="cl-chip__count">{n}</span> })
+            }}
         </button>
     }
 }
@@ -710,22 +825,156 @@ pub fn Divider() -> impl IntoView {
 }
 
 /// Standalone spinner (Mantine `Loader`).
+///
+/// - `size`: `"xs"` (14px, for a line of text or a button), `"sm"` (20px) or
+///   `"md"` (32px, default).
+/// - `label` (optional): the accessible name ("Loading runs"). With a label
+///   the spinner is a `role="status"`; with none it is hidden from screen
+///   readers, for a place that says it is busy another way.
 #[component]
-pub fn Loader() -> impl IntoView {
-    view! { <div class="cl-loader"></div> }
+pub fn Loader(
+    #[prop(optional, into)] size: String,
+    #[prop(optional, into)] label: String,
+) -> impl IntoView {
+    let class = match size.as_str() {
+        "xs" | "sm" => format!("cl-loader cl-loader--{size}"),
+        _ => "cl-loader".to_string(),
+    };
+    if label.is_empty() {
+        return view! { <span class=class aria-hidden="true"></span> }.into_any();
+    }
+    view! { <span class=class role="status"><span class="cl-sr-only">{label}</span></span> }
+        .into_any()
+}
+
+/// A grey placeholder in the shape of content that is loading.
+///
+/// - `width`, `height` (CSS lengths): default `100%` and `1em`.
+/// - `lines`: draw that many lines of text instead (the last one shorter).
+/// - `circle`: a circle of `height` (an avatar).
+///
+/// It is hidden from screen readers: say "loading" another way (a
+/// [`Loader`] with a label, or `aria-busy` on the region). The shimmer stops
+/// when the OS asks for reduced motion.
+#[component]
+pub fn Skeleton(
+    #[prop(optional, into)] width: String,
+    #[prop(optional, into)] height: String,
+    #[prop(optional)] lines: usize,
+    #[prop(optional)] circle: bool,
+) -> impl IntoView {
+    let width = if width.is_empty() {
+        "100%".to_string()
+    } else {
+        width
+    };
+    let height = if height.is_empty() {
+        "1em".to_string()
+    } else {
+        height
+    };
+    if lines > 0 {
+        let rows = (0..lines)
+            .map(|i| {
+                let w = if i + 1 == lines && lines > 1 { "60%" } else { "100%" };
+                view! { <span class="cl-skeleton" style=format!("width:{w};height:{height};")></span> }
+            })
+            .collect_view();
+        return view! { <span class="cl-skeleton-lines" aria-hidden="true" style=format!("width:{width};")>{rows}</span> }
+            .into_any();
+    }
+    let style = if circle {
+        format!("width:{height};height:{height};")
+    } else {
+        format!("width:{width};height:{height};")
+    };
+    view! {
+        <span class="cl-skeleton" class:cl-skeleton--circle=circle aria-hidden="true" style=style></span>
+    }
+    .into_any()
+}
+
+/// The name that ties the [`Disclosure`]s of one [`Accordion`] together.
+#[derive(Clone)]
+struct AccordionName(Option<String>);
+
+/// A group of [`Disclosure`]s. By default one is open at a time: opening one
+/// closes the others (the HTML `name` of `<details>`). `multiple`: any number
+/// can be open.
+#[component]
+pub fn Accordion(#[prop(optional)] multiple: bool, children: Children) -> impl IntoView {
+    let name =
+        (!multiple).then(|| crate::components::field_id().replace("cl-field", "cl-accordion"));
+    view! {
+        <Provider value=AccordionName(name)>
+            <div class="cl-accordion">{children()}</div>
+        </Provider>
+    }
+}
+
+/// A section that a person opens and closes: a native `<details>` with a
+/// `<summary>`, so the keyboard and screen readers work with no script.
+///
+/// - `title`: the always-visible line.
+/// - `open` (optional): the open state, as a signal to read or set. With none,
+///   the section starts closed (or `default_open`) and keeps its own state.
+/// - Inside an [`Accordion`], opening one section closes the others.
+#[component]
+pub fn Disclosure(
+    #[prop(into)] title: Signal<String>,
+    #[prop(optional)] open: Option<RwSignal<bool>>,
+    #[prop(optional)] default_open: bool,
+    children: Children,
+) -> impl IntoView {
+    let open = open.unwrap_or_else(|| RwSignal::new(default_open));
+    let name = use_context::<AccordionName>().and_then(|n| n.0);
+    view! {
+        <details
+            class="cl-disclosure"
+            name=name
+            prop:open=move || open.get()
+            on:toggle=move |ev| {
+                use leptos::wasm_bindgen::JsCast;
+                if let Some(d) = ev.target().and_then(|t| t.dyn_into::<web_sys::HtmlDetailsElement>().ok()) {
+                    if open.get_untracked() != d.open() {
+                        open.set(d.open());
+                    }
+                }
+            }
+        >
+            <summary class="cl-disclosure__summary">
+                <span class="cl-disclosure__chevron" aria-hidden="true"></span>
+                <span class="cl-disclosure__title">{move || title.get()}</span>
+            </summary>
+            <div class="cl-disclosure__body">{children()}</div>
+        </details>
+    }
 }
 
 /// Square icon-only button (Mantine `ActionIcon`).
+///
+/// - `aria_label`: the accessible name. Give it: the children are an icon.
+///   With none, the `title` is the name.
+/// - `title`: the tooltip.
+/// - `disabled`: a `bool`, a signal or a closure.
+/// - `button_type`: the `type` attribute, `"button"` by default, so the
+///   button does not submit a form (AURORA-T-0013 item 12).
 #[component]
 pub fn ActionIcon(
-    #[prop(optional, into)] title: String,
+    #[prop(optional, into)] title: Signal<String>,
+    #[prop(optional, into)] aria_label: Signal<String>,
+    #[prop(optional, into)] disabled: Signal<bool>,
+    #[prop(default = "button".to_string(), into)] button_type: String,
     #[prop(optional)] on_click: Option<Callback<()>>,
     children: Children,
 ) -> impl IntoView {
     view! {
         <button
             class="cl-action-icon"
-            title=title
+            type=button_type
+            title=move || attr(title.get())
+            aria-label=move || attr(aria_label.get())
+            disabled=move || disabled.get()
             on:click=move |_| { if let Some(cb) = on_click { cb.run(()); } }
         >
             {children()}
@@ -830,7 +1079,8 @@ pub fn SegmentedControl(options: Vec<String>, value: RwSignal<String>) -> impl I
 ///
 /// Same props as [`TextInput`] where they apply: `disabled`, `on_input`,
 /// `on_change`, `name`, `required`, `error` (a string, a signal or a
-/// closure), `mono`, `id`, `aria_label`. `rows` (default 4).
+/// closure), `mono`, `id`, `aria_label`, `description`, `described_by`,
+/// `autofocus`, `maxlength`. `rows` (default 4).
 #[component]
 pub fn Textarea(
     #[prop(optional, into)] label: String,
@@ -846,32 +1096,40 @@ pub fn Textarea(
     #[prop(optional)] mono: bool,
     #[prop(optional, into)] id: String,
     #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] description: Signal<String>,
+    #[prop(optional, into)] described_by: String,
+    #[prop(optional)] autofocus: bool,
+    #[prop(optional)] maxlength: Option<u32>,
 ) -> impl IntoView {
-    let has_label = !label.is_empty();
     let has_error = move || error.with(|e| !e.is_empty());
     let id = control_id(id);
     let err_id = format!("{id}-error");
-    let described = err_id.clone();
+    let described = describedby(&id, description, described_by, error);
+    let node = NodeRef::<leptos::html::Textarea>::new();
+    if autofocus {
+        focus_on_mount(node);
+    }
     let mut class = String::from("cl-input");
     if mono {
         class.push_str(" cl-mono");
     }
     view! {
         <div class="cl-field">
-            {has_label.then(|| view! {
-                <label class="cl-field__label" for=id.clone()>{label}</label>
-            })}
+            {field_label(label, id.clone(), required)}
             <textarea
+                node_ref=node
                 class=class
-                    class:cl-input--error=has_error
-                id=id
+                class:cl-input--error=has_error
+                id=id.clone()
                 rows=rows
                 placeholder=attr(placeholder)
                 name=attr(name)
                 aria-label=attr(aria_label)
                 required=required
+                autofocus=autofocus
+                maxlength=maxlength
                 aria-invalid=move || has_error().then_some("true")
-                aria-describedby=move || has_error().then(|| described.clone())
+                aria-describedby=described
                 disabled=move || disabled.get()
                 prop:value=move || value.get()
                 on:input=move |e| {
@@ -883,6 +1141,7 @@ pub fn Textarea(
                     if let Some(cb) = on_change { cb.run(event_target_value(&e)); }
                 }
             ></textarea>
+            {field_help(description, format!("{id}-help"))}
             {field_error(error, err_id)}
         </div>
     }
@@ -892,7 +1151,8 @@ pub fn Textarea(
 ///
 /// - `step` (default 1), `min` and `max` (the steppers stop there).
 /// - `disabled`, `on_change` (runs with the new number), `name`, `required`,
-///   `error` (a string, a signal or a closure), `id` (of the `<input>`).
+///   `error` (a string, a signal or a closure), `id` (of the `<input>`),
+///   `aria_label`, `description`, `described_by`.
 #[component]
 pub fn NumberInput(
     #[prop(optional, into)] label: String,
@@ -906,8 +1166,10 @@ pub fn NumberInput(
     #[prop(optional, into)] name: String,
     #[prop(optional)] required: bool,
     #[prop(optional, into)] id: String,
+    #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] description: Signal<String>,
+    #[prop(optional, into)] described_by: String,
 ) -> impl IntoView {
-    let has_label = !label.is_empty();
     let has_error = move || error.with(|e| !e.is_empty());
     let fmt = move || {
         let v = value.get();
@@ -930,26 +1192,25 @@ pub fn NumberInput(
     };
     let id = control_id(id);
     let err_id = format!("{id}-error");
-    let described = err_id.clone();
+    let described = describedby(&id, description, described_by, error);
     let class = "cl-input";
     view! {
         <div class="cl-field">
-            {has_label.then(|| view! {
-                <label class="cl-field__label" for=id.clone()>{label}</label>
-            })}
+            {field_label(label, id.clone(), required)}
             <div class="cl-number">
                 <input
                     class=class
                     class:cl-input--error=has_error
-                    id=id
+                    id=id.clone()
                     type="number"
                     step=step
                     min=min
                     max=max
                     name=attr(name)
+                    aria-label=attr(aria_label)
                     required=required
                     aria-invalid=move || has_error().then_some("true")
-                    aria-describedby=move || has_error().then(|| described.clone())
+                    aria-describedby=described
                     disabled=move || disabled.get()
                     prop:value=fmt
                     on:input=move |e| {
@@ -975,6 +1236,7 @@ pub fn NumberInput(
                     >"▼"</button>
                 </div>
             </div>
+            {field_help(description, format!("{id}-help"))}
             {field_error(error, err_id)}
         </div>
     }
@@ -986,6 +1248,9 @@ pub fn NumberInput(
 ///   `"new-password"` on a form that sets one, so a password manager helps.
 /// - `disabled`, `on_input`, `on_change`, `name`, `required`, `error` (a
 ///   string, a signal or a closure), `id` (of the `<input>`).
+/// - `aria_label` (the accessible name when there is no visible `label`),
+///   `description`, `described_by`, `autofocus`, `maxlength`: as on
+///   [`TextInput`].
 #[component]
 pub fn PasswordInput(
     #[prop(optional, into)] label: String,
@@ -999,31 +1264,41 @@ pub fn PasswordInput(
     #[prop(optional, into)] autocomplete: String,
     #[prop(optional)] required: bool,
     #[prop(optional, into)] id: String,
+    #[prop(optional, into)] aria_label: String,
+    #[prop(optional, into)] description: Signal<String>,
+    #[prop(optional, into)] described_by: String,
+    #[prop(optional)] autofocus: bool,
+    #[prop(optional)] maxlength: Option<u32>,
 ) -> impl IntoView {
     let reveal = RwSignal::new(false);
-    let has_label = !label.is_empty();
     let has_error = move || error.with(|e| !e.is_empty());
     let id = control_id(id);
     let err_id = format!("{id}-error");
-    let described = err_id.clone();
+    let described = describedby(&id, description, described_by, error);
+    let node = NodeRef::<leptos::html::Input>::new();
+    if autofocus {
+        focus_on_mount(node);
+    }
     let class = "cl-input";
     view! {
         <div class="cl-field">
-            {has_label.then(|| view! {
-                <label class="cl-field__label" for=id.clone()>{label}</label>
-            })}
+            {field_label(label, id.clone(), required)}
             <div class="cl-input-wrap">
                 <input
+                    node_ref=node
                     class=class
                     class:cl-input--error=has_error
-                    id=id
+                    id=id.clone()
                     type=move || if reveal.get() { "text" } else { "password" }
                     placeholder=attr(placeholder)
                     name=attr(name)
                     autocomplete=attr(autocomplete)
+                    aria-label=attr(aria_label)
                     required=required
+                    autofocus=autofocus
+                    maxlength=maxlength
                     aria-invalid=move || has_error().then_some("true")
-                    aria-describedby=move || has_error().then(|| described.clone())
+                    aria-describedby=described
                     disabled=move || disabled.get()
                     prop:value=move || value.get()
                     on:input=move |e| {
@@ -1061,6 +1336,7 @@ pub fn PasswordInput(
                     }}
                 </button>
             </div>
+            {field_help(description, format!("{id}-help"))}
             {field_error(error, err_id)}
         </div>
     }

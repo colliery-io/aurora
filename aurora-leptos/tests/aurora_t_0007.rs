@@ -384,10 +384,12 @@ fn item_18_notice_comes_before_the_impacts() {
 #[test]
 fn item_19_readme_gives_a_trunk_path_with_no_install() {
     let readme = include_str!("../../README.md");
-    // The helper crate: leptos-free, and it calls write_css.
-    assert!(
-        readme.contains(r#"colliery-io-aurora = { version = "0.4", default-features = false }"#)
-    );
+    // The helper crate: leptos-free, and it calls write_css. The version is
+    // this crate's major.minor (AURORA-T-0013 item 6).
+    let minor = env!("CARGO_PKG_VERSION").rsplit_once('.').unwrap().0;
+    let helper =
+        format!(r#"colliery-io-aurora = {{ version = "{minor}", default-features = false }}"#);
+    assert!(readme.contains(&helper), "README must say {helper}");
     assert!(readme.contains("aurora_leptos::write_css(std::path::Path::new(&dir))"));
     assert!(readme.contains(r#""run", "-q", "-p", "aurora-css","#));
     // The install line pins the version of this crate.

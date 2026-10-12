@@ -164,9 +164,9 @@
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* No rule on `#main`: that id is the product's (AURORA-T-0013 item 3). */
 html,
-body,
-#main {
+body {
   height: 100%;
 }
 

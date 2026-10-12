@@ -9,6 +9,8 @@ use aurora_leptos::tokens::{token, ApiError};
 use aurora_leptos::widgets::*;
 use leptos::prelude::*;
 
+mod controls_demo;
+use controls_demo::ControlsSections;
 mod data_demo;
 use data_demo::DataSections;
 mod frame_demo;
@@ -49,6 +51,8 @@ const NAV: &[(&str, &str)] = &[
     ("panel-modal", "Panel · Modal"),
     ("states", "Loading · Empty · ErrorState"),
     ("more-inputs", "Switch · Number · Password · …"),
+    ("controls", "Checkbox · File · Slider · Combobox"),
+    ("disclosure", "Disclosure · Skeleton · Loader"),
     ("layout-prims", "SimpleGrid · Grid · List"),
     ("menu-appshell", "Menu"),
     ("§Frame", ""),
@@ -304,7 +308,7 @@ fn App() -> impl IntoView {
             <Section id="forms" title="TextInput · Select · Tooltip" caption="form controls + hover tooltip">
                 <div class="gallery__card">
                     <Stack>
-                        <TextInput label="Schedule name" placeholder="e.g. nightly-ingest" value=name />
+                        <TextInput label="Schedule name" placeholder="e.g. nightly-ingest" value=name required=true description="Letters, digits and dashes." maxlength=40 />
                         <TextInput label="Cron (invalid)" placeholder="* * * * *" value=bad_field error="Expected 5 fields, got 4" />
                         <Select label="Input strategy" value=strategy options=vec!["when_all".into(), "when_any".into(), "latest".into(), "sequential".into()] />
                         <Group gap="sm">
@@ -390,7 +394,8 @@ fn App() -> impl IntoView {
                         <Group gap="sm" wrap=true>
                             <Switch checked=switch_on label="Live updates" />
                             <SegmentedControl value=segment options=vec!["Live".into(), "Paused".into(), "Replay".into()] />
-                            <ActionIcon title="Refresh">"⟳"</ActionIcon>
+                            <ActionIcon title="Refresh" aria_label="Refresh">"⟳"</ActionIcon>
+                            <ActionIcon title="Delete (disabled)" aria_label="Delete" disabled=true>"×"</ActionIcon>
                             <CopyButton value="exec_7f3a01" />
                         </Group>
                         <Group gap="sm" wrap=true>
@@ -401,6 +406,8 @@ fn App() -> impl IntoView {
                     </Stack>
                 </div>
             </Section>
+
+            <ControlsSections />
 
             // ---- Layout primitives ----
             <Section id="layout-prims" title="Box · SimpleGrid · Grid · List · Table · Divider" caption="layout + structural primitives">

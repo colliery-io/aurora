@@ -46,6 +46,11 @@ components = [
     "web-sys/HtmlDivElement",
     # CopyButton: copy a link (the page origin).
     "web-sys/Location",
+    # Disclosure reads the open state of a <details>; FileInput the files.
+    "web-sys/HtmlDetailsElement",
+    "web-sys/HtmlInputElement",
+    "web-sys/File",
+    "web-sys/FileList",
 ]
 
 # Makes this crate a design pack for Hlin: a module implementing `DesignPack`,

@@ -77,6 +77,8 @@ pub use tokens::*;
 #[cfg(feature = "components")]
 pub mod components;
 #[cfg(feature = "components")]
+pub mod controls;
+#[cfg(feature = "components")]
 pub mod data;
 #[cfg(feature = "components")]
 pub mod frame;

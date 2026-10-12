@@ -25,7 +25,7 @@ use std::cmp::Ordering;
 use leptos::html;
 use leptos::prelude::*;
 
-use crate::components::{Button, CopyButton};
+use crate::components::{Button, CopyButton, Loader};
 use crate::icons::IconChevron;
 use crate::tokens::{fg_for, fill_for, status_color, token};
 
@@ -1209,6 +1209,11 @@ pub fn FeedRow(
 ///   [`PageRange`] (for example "Page 3 of 11"). Default:
 ///   [`page_range_label`] ("41–60 of 212").
 ///
+/// - `disabled` (optional): while true, the buttons and the select do nothing.
+/// - `busy` (optional): while true (a page is loading), the same, and the
+///   pager has `aria-busy="true"` and shows a small spinner
+///   (AURORA-T-0013 item 18).
+///
 /// A new page size keeps the first item of the page in view.
 #[component]
 pub fn Pagination(
@@ -1221,7 +1226,10 @@ pub fn Pagination(
     #[prop(optional)] on_change: Option<Callback<(usize, usize)>>,
     #[prop(default = true)] show_range: bool,
     #[prop(optional)] range_label: Option<Callback<PageRange, String>>,
+    #[prop(optional, into)] disabled: Signal<bool>,
+    #[prop(optional, into)] busy: Signal<bool>,
 ) -> impl IntoView {
+    let off = move || disabled.get() || busy.get();
     let range = Memo::new(move |_| page_range(offset.get(), limit.get(), total.get()));
     let range_text = move || match range_label {
         Some(cb) => cb.run(range.get()),
@@ -1249,6 +1257,7 @@ pub fn Pagination(
                 <select
                     id=size_id2
                     class="cl-input cl-select cl-pager__select"
+                    disabled=off
                     prop:value=move || limit.get().to_string()
                     on:change=move |e| {
                         if let Ok(n) = event_target_value(&e).parse::<usize>() {
@@ -1265,16 +1274,21 @@ pub fn Pagination(
         }
     });
     view! {
-        <nav class="cl-pager" aria-label="Pagination">
+        <nav
+            class="cl-pager"
+            aria-label="Pagination"
+            aria-busy=move || busy.get().then_some("true")
+        >
             {show_range.then(|| view! {
                 <span class="cl-pager__range cl-tnum" aria-live="polite">{range_text}</span>
             })}
+            {move || busy.get().then(|| view! { <Loader size="xs" /> })}
             <span class="cl-pager__controls">
                 {sizes}
                 <Button
                     variant="default"
                     size="xs"
-                    disabled=Signal::derive(move || !range.get().has_prev)
+                    disabled=Signal::derive(move || off() || !range.get().has_prev)
                     on_click=Callback::new(move |_| go(range.get_untracked().prev_offset))
                 >
                     <IconChevron size=14 dir="left" />
@@ -1283,7 +1297,7 @@ pub fn Pagination(
                 <Button
                     variant="default"
                     size="xs"
-                    disabled=Signal::derive(move || !range.get().has_next)
+                    disabled=Signal::derive(move || off() || !range.get().has_next)
                     on_click=Callback::new(move |_| go(range.get_untracked().next_offset))
                 >
                     {next_label}

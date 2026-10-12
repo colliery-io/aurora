@@ -1,5 +1,107 @@
 # Changelog
 
+## Unreleased
+
+The repairs of AURORA-T-0013, the defects that the Skadi migration to 0.5.0
+found, and of AURORA-T-0012. The numbers are the items of AURORA-T-0013.
+`tests/aurora_t_0013.rs` has a test for each item.
+
+### AppShell
+
+- **1.** The drawer state is in the context: `use_app_shell()` gives an
+  `AppShellNav` (`is_open`, `open`, `close`, `toggle`, `open_signal`), or give
+  the shell your own signal with `nav_open`. Close the drawer on a route
+  change with `use_app_shell().map(|n| n.close())`. The drawer closes when the
+  window gets wider than the breakpoint, and the page under an open drawer
+  does not scroll.
+- **2.** `main_id` and `main_class` for the `<main>`. With an id, `<main>` has
+  `tabindex="-1"`, so a skip link moves focus to it.
+- **3.** `tokens.css` no longer styles `#main` (it set `height: 100%`).
+- **4.** `skip_link="Skip to content"`: a skip link, the first Tab stop of the
+  shell, shown only with focus. It goes to `main_id` (default `"main"`).
+- **5.** `breakpoint` (px): the width below which the sidebar is a drawer.
+  The default is `APPSHELL_BREAKPOINT` (768).
+- **21.** The callback that focuses the open drawer no longer reads a disposed
+  node after the shell is gone.
+
+Skadi can now remove `close_drawer()`, the `:has()` scroll lock, the Effect
+that sets the id of `<main>`, the `#main { height: auto; }` rule and its own
+skip link.
+
+### Theme toggle and segmented control
+
+- **7.** The marked item is clear in every theme: an accent tint, an accent
+  ring and bold accent text. The contrast test checks it.
+- **8.** `.cl-segmented__item` has `font: inherit` and a focus ring.
+
+### Inputs
+
+- **9.** `TextInput`, `Select`, `Textarea`, `PasswordInput` and `NumberInput`
+  take `description` (a help line under the field, in `aria-describedby`) and
+  `described_by` (more ids). `required` marks the label with `*`. New:
+  `autofocus` (`TextInput`, `Select`, `Textarea`, `PasswordInput`),
+  `maxlength` (`TextInput`, `Textarea`, `PasswordInput`), `min`, `max`,
+  `step` (`TextInput`), `aria_label` (`PasswordInput`, `NumberInput`).
+- **11.** `Select`'s `options` and `option_pairs` take a signal or a closure;
+  the select shows new choices when they change.
+- **20.** A focused input has a 2px ring, not only a border colour.
+
+### Buttons and chips
+
+- **10.** `Chip`'s `count` takes a signal or a closure.
+- **12.** `ActionIcon` has `aria_label`, `disabled` and `button_type`, and is
+  `type="button"` by default.
+- **13.** `Button`'s `title` and `aria_label` take a signal or a closure.
+
+### States, tables, dialogs, toasts
+
+- **14.** The link of `Empty` is underlined.
+- **15.** `ToastStack` keeps two live regions on the page (polite for info,
+  success and warning; assertive for errors) and reads each new toast there.
+  The toasts on screen are no longer live regions of their own.
+- **16.** `Modal`, `Drawer` and `ConfirmDialog` move to the end of `<body>`
+  when they open, so no rule of the page reaches the fixed scrim.
+  `in_place=true` keeps a dialog where it is.
+- **17.** `ConfirmDialog` takes `initial_focus` (`"cancel"`, the default, or
+  `"confirm"`) and `alert` (`role="alertdialog"`, the message as its
+  description, no close on a scrim click).
+- **18.** `Pagination` takes `disabled` and `busy` (`aria-busy`, a small
+  spinner, the controls off).
+- **19.** In a `fixed` table, a cell with `colspan` (a message row,
+  `TableEmpty`) wraps instead of being cut. The class `cl-wrap` lets any cell
+  wrap.
+
+### New components (22)
+
+`Checkbox`, `FileInput`, `Slider`, `Combobox` (in `controls.rs`),
+`Disclosure` and `Accordion`, `Skeleton`, and `Loader` sizes (`size="xs"`,
+`"sm"`) with an optional `label`. The gallery shows each one. Pure helper:
+`combobox_matches`.
+
+### Hlin (AURORA-T-0012)
+
+`HLIN_CSS` includes `graph.css`: in a Hlin front end, `aurora.graph` drew its
+graph as black boxes. A test draws each view of `AuroraPack` and checks that
+its classes are styled in `HLIN_CSS`.
+
+### Docs
+
+The READMEs name 0.5 and hlin-ui 0.1, and say that `DesignPack` has thirteen
+methods.
+
+### Breaking
+
+- `Select`'s `options` and `option_pairs`, `Chip`'s `count`, and the `title`
+  and `aria_label` of `Button` and `ActionIcon` are signals now. A `Vec`, a
+  number or a `String` still works, as do the calls in Skadi and Kairos.
+- `ActionIcon` is `type="button"`: in a `<form>` it no longer submits. Give
+  `button_type="submit"` for the old behaviour.
+- A dialog is no longer in the page where it is written. A rule that styled
+  it through a page ancestor no longer applies; use `in_place=true`.
+- `Loader` is a `<span>` (inline-block), and hidden from screen readers unless
+  it has a `label`.
+- `ToastKind::role()` is the role of the live region, not of the toast.
+
 ## 0.5.0
 
 The opt-in **hyper** theme (AURORA-T-0010): neon hues on a dark base, with a

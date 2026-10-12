@@ -33,7 +33,7 @@ Each constant is a `&str` of CSS, in the crate at build time.
 | `GRAPH_CSS` | The graph styles only (`Dag`, `DagLegend`, `Graph`). They need the tokens. |
 | `FONTS_CSS` | The IBM Plex `@font-face` rules only. |
 | `HYPER_CSS` | The opt-in hyper theme. Not in `AURORA_CSS`. Load it after it. |
-| `HLIN_CSS` | With `hlin`: the stylesheet of a Hlin front end. Fonts, tokens, components and the Hlin styles. |
+| `HLIN_CSS` | With `hlin`: the stylesheet of a Hlin front end. Fonts, tokens, components, the graph and the Hlin styles. |
 
 ## Stylesheet functions
 
