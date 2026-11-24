@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+AURORA-T-0016. Nothing is removed or renamed.
+
+- `graph_layout`: `LayoutOptions::lane_rows` (default `false`). With it on,
+  each lane is one row across all layers: nodes are sorted by lane in each
+  layer, and the output has one `PlacedLane` per lane, the full width of the
+  graph. With it off, lanes are bands per layer, as before.
+
 ## 0.6.1
 
 A patch release with the repair of AURORA-T-0014. Nothing is removed or
