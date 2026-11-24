@@ -411,6 +411,13 @@ pub struct LayoutOptions {
     pub margin: f64,
     /// Barycenter sweeps (down and up) for the order.
     pub sweeps: usize,
+    /// Lane rows (AURORA-T-0016, left to right only): each lane is ONE
+    /// horizontal band over all layers. The bands are stacked in the order
+    /// of the given [`DagLane`]s, then the lane ids that only nodes name;
+    /// the nodes with no lane are in a last row with no band. Inside a lane,
+    /// each layer keeps the order of the crossing reduction. False by
+    /// default: a lane is a band inside one layer.
+    pub lane_rows: bool,
 }
 
 impl Default for LayoutOptions {
@@ -426,6 +433,7 @@ impl Default for LayoutOptions {
             lane_gap: 10.0,
             margin: 16.0,
             sweeps: 4,
+            lane_rows: false,
         }
     }
 }
@@ -535,6 +543,9 @@ struct Item {
     /// The node (index into the kept nodes), or `None` for a dummy.
     node: Option<usize>,
     lane: Option<usize>,
+    /// The lane row of the item in the lane-rows mode: its lane, or for a
+    /// dummy point the lane of the start of its edge.
+    row: Option<usize>,
     /// Tie break: (lane-less, key rank, second key, edge).
     tie: (usize, usize, usize, usize),
 }
@@ -651,6 +662,7 @@ pub fn layout(
             layer: rank[k],
             node: Some(k),
             lane: lane_of[k],
+            row: lane_of[k],
             tie: (usize::from(lane_of[k].is_none()), key_rank[k], 0, 0),
         })
         .collect();
@@ -677,6 +689,7 @@ pub fn layout(
                 layer,
                 node: None,
                 lane: None,
+                row: lane_of[a],
                 tie: (1, key_rank[a], 1 + key_rank[b], e),
             });
             segments.push((prev, d));
@@ -776,7 +789,16 @@ pub fn layout(
             best = order.clone();
         }
     }
-    let order = best;
+    let mut order = best;
+    let rows = opts.lane_rows && lr;
+    // AURORA-T-0016: in the lane-rows mode, each layer goes row by row; the
+    // sort is stable, so a lane keeps the order of the crossing reduction.
+    let row_rank = |i: usize| items[i].row.unwrap_or(lane_table.len());
+    if rows {
+        for layer in order.iter_mut() {
+            layer.sort_by_key(|&i| row_rank(i));
+        }
+    }
 
     // ---- 4. place ----------------------------------------------------------
     let (across_size, along_size) = if lr {
@@ -891,6 +913,72 @@ pub fn layout(
         }
     }
 
+    // AURORA-T-0016: the lane rows. Each row is as tall as its tallest
+    // layer; the rows are stacked from `start`; each item of a row stacks
+    // from the top of its band.
+    let mut row_bands: Vec<(usize, f64, f64)> = Vec::new();
+    if rows {
+        let row_count = lane_table.len() + 1;
+        let gap = |p: usize, q: usize| match (items[p].node.is_some(), items[q].node.is_some()) {
+            (true, true) => opts.node_gap,
+            (false, false) => DUMMY_GAP,
+            _ => opts.node_gap / 2.0,
+        };
+        let mut extent = vec![0.0f64; row_count];
+        let mut used = vec![false; row_count];
+        for layer in &order {
+            let mut prev: Option<usize> = None;
+            let mut run = 0.0;
+            let mut row = usize::MAX;
+            for &i in layer {
+                let r = row_rank(i);
+                if r != row {
+                    row = r;
+                    run = 0.0;
+                    prev = None;
+                }
+                run += size(i) + prev.map_or(0.0, |p| gap(p, i));
+                prev = Some(i);
+                used[r] = true;
+                extent[r] = extent[r].max(run);
+            }
+        }
+        let mut cursor = start;
+        let mut inner_top = vec![0.0f64; row_count];
+        for r in 0..row_count {
+            if !used[r] {
+                continue;
+            }
+            let banded = r < lane_table.len();
+            let top = cursor;
+            let pad = if banded { opts.lane_pad } else { 0.0 };
+            inner_top[r] = top + pad + if banded { label_room } else { 0.0 };
+            let bottom = inner_top[r] + extent[r].max(along_size) + pad;
+            if banded {
+                row_bands.push((r, top + label_room, bottom));
+            }
+            cursor = bottom + opts.lane_gap + opts.node_gap;
+        }
+        for layer in &order {
+            let mut prev: Option<usize> = None;
+            let mut c = 0.0;
+            let mut row = usize::MAX;
+            for &i in layer {
+                let r = row_rank(i);
+                if r != row {
+                    row = r;
+                    prev = None;
+                }
+                c = match prev {
+                    None => inner_top[r] + size(i) / 2.0,
+                    Some(p) => c + (size(p) + size(i)) / 2.0 + gap(p, i),
+                };
+                coord[i] = c;
+                prev = Some(i);
+            }
+        }
+    }
+
     let across_start = opts.margin
         + if !lr && lane_of.iter().any(Option::is_some) {
             LANE_LABEL
@@ -921,9 +1009,25 @@ pub fn layout(
         }
     }
 
-    // Lane bands: one per run of lane members in a layer.
+    // Lane bands: one per run of lane members in a layer, or one per lane
+    // row (AURORA-T-0016).
     let mut placed_lanes = Vec::new();
-    for (l, layer) in order.iter().enumerate() {
+    for &(r, top, bottom) in &row_bands {
+        let across0 = across_c(0) - across_size / 2.0 - opts.lane_pad;
+        let across1 = across_c(layer_count - 1) + across_size / 2.0 + opts.lane_pad;
+        placed_lanes.push(PlacedLane {
+            id: lane_table[r].0.clone(),
+            label: lane_table[r].1.clone(),
+            layer: 0,
+            x: across0,
+            y: top,
+            w: across1 - across0,
+            h: bottom - top,
+            label_x: across0 + 6.0,
+            label_y: top - 4.0,
+        });
+    }
+    for (l, layer) in order.iter().enumerate().filter(|_| !rows) {
         let mut at = 0;
         while at < layer.len() {
             let Some(lane) = items[layer[at]].lane else {
@@ -1031,6 +1135,7 @@ pub fn layout(
         .filter_map(|layer| layer.last())
         .map(|&i| coord[i] + size(i) / 2.0 + bottom_extra(i))
         .fold(start, f64::max)
+        .max(row_bands.iter().map(|b| b.2).fold(0.0, f64::max))
         + opts.margin;
     let (width, height) = xy(across_end, along_end);
 
@@ -1253,6 +1358,87 @@ mod tests {
 
     fn placed<'a>(l: &'a Layout, id: &str) -> &'a PlacedNode {
         l.node(id).unwrap_or_else(|| panic!("{id} is not placed"))
+    }
+
+    // ---- lane rows (AURORA-T-0016) -------------------------------------------
+
+    /// Two lanes over three layers, a cross-lane edge, and a node with no
+    /// lane.
+    fn lane_rows_graph() -> (Vec<DagNode>, Vec<DagEdge>, Vec<DagLane>) {
+        let nodes = vec![
+            DagNode::new("a1", "a1").lane("A"),
+            DagNode::new("a2", "a2").lane("A"),
+            DagNode::new("a3", "a3").lane("A"),
+            DagNode::new("b1", "b1").lane("B"),
+            DagNode::new("b2", "b2").lane("B"),
+            DagNode::new("free", "free"),
+        ];
+        let edges = vec![
+            DagEdge::new("a1", "a2"),
+            DagEdge::new("a2", "a3"),
+            DagEdge::new("b1", "b2"),
+            DagEdge::new("b2", "a3"),
+        ];
+        // B first: the product gives the order.
+        let lanes = vec![DagLane::new("B", "Lane B"), DagLane::new("A", "Lane A")];
+        (nodes, edges, lanes)
+    }
+
+    fn rows_opts() -> LayoutOptions {
+        LayoutOptions {
+            lane_rows: true,
+            ..LayoutOptions::default()
+        }
+    }
+
+    #[test]
+    fn lane_rows_give_one_band_per_lane_over_all_layers() {
+        let (nodes, edges, lanes) = lane_rows_graph();
+        let l = layout(&nodes, &edges, &lanes, &[], &rows_opts());
+        assert_eq!(l.lanes.len(), 2, "{:?}", l.lanes);
+        let band = |id: &str| l.lanes.iter().find(|b| b.id == id).expect("band");
+        let (a, b) = (band("A"), band("B"));
+        // Over all layers: from the first column to the last.
+        let first = l.nodes.iter().map(|n| n.x).fold(f64::INFINITY, f64::min);
+        let last = l.nodes.iter().map(|n| n.x + n.w).fold(0.0, f64::max);
+        for band in [a, b] {
+            assert!(band.x <= first && band.x + band.w >= last, "{band:?}");
+        }
+        // The given order: B above A, and no overlap.
+        assert!(b.y + b.h <= a.y, "B {b:?} A {a:?}");
+        // Each node of a lane is inside its band.
+        for node in &l.nodes {
+            let lane = nodes
+                .iter()
+                .find(|n| n.id == node.id)
+                .and_then(|n| n.lane.clone());
+            if let Some(lane) = lane {
+                let band = band(&lane);
+                assert!(
+                    node.y >= band.y && node.y + node.h <= band.y + band.h,
+                    "{node:?} {band:?}"
+                );
+            }
+        }
+        // The node with no lane is below the bands.
+        assert!(
+            placed(&l, "free").y >= a.y + a.h,
+            "{:?}",
+            placed(&l, "free")
+        );
+        assert!(l.height >= placed(&l, "free").y + placed(&l, "free").h);
+    }
+
+    #[test]
+    fn lane_rows_are_off_by_default_and_keep_the_layer_bands() {
+        let (nodes, edges, lanes) = lane_rows_graph();
+        let banded = layout(&nodes, &edges, &lanes, &[], &LayoutOptions::default());
+        assert!(!LayoutOptions::default().lane_rows);
+        // A band per run of a lane in a layer: more than one band for A.
+        assert!(banded.lanes.iter().filter(|b| b.id == "A").count() > 1);
+        // The mode is deterministic.
+        let again = layout(&nodes, &edges, &lanes, &[], &rows_opts());
+        assert_eq!(again, layout(&nodes, &edges, &lanes, &[], &rows_opts()));
     }
 
     // ---- ranking -----------------------------------------------------------
