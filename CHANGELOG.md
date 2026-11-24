@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
 
-AURORA-T-0016. Nothing is removed or renamed.
+AURORA-T-0016. Nothing is removed or renamed. `LayoutOptions` has a new
+public field, so code that builds it with a struct literal must add
+`lane_rows` or use `..Default::default()`.
 
 - `graph_layout`: `LayoutOptions::lane_rows` (default `false`). With it on,
   each lane is one row across all layers: nodes are sorted by lane in each
